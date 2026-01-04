@@ -1,0 +1,11 @@
+{
+  "User": {
+    "password": "123",
+    "stats": {
+      "random_wins": 2,
+      "last_completed_level": 1,
+      "deaths": 4,
+      "deaths_from_black_hole": 1
+    }
+  }
+}
