@@ -1,6 +1,7 @@
 # ui/campaign_map_window.py
 
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton, QScrollArea, QHBoxLayout, QLabel
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton
+from PyQt5.QtWidgets import QScrollArea, QHBoxLayout, QLabel
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from ui.network_client import send_request
@@ -72,6 +73,7 @@ class CampaignMapWindow(QMainWindow):
 
 
 
+####### СОБЫТИЯ #######
     def create_level_button(self, level):
         btn = QPushButton()
         btn.setFixedSize(100, 100)
@@ -100,15 +102,17 @@ class CampaignMapWindow(QMainWindow):
         from ui.game_window import GameWindow
 
         if level_idd == 1:
-            level_state = get_level_1()
+            level_state = get_level_1(self.username)
         # elif level_id == 2:
         #     level_state = get_level_2()
         else:
             return
 
         # Создаём игровое окно
-        self.game_window = GameWindow(parent=self.parent_window, campaign=True, level_id=level_idd)
+        self.game_window = GameWindow(self.username, parent=self.parent_window, campaign=True, level_id=level_idd)
         self.game_window.show()
         self.game_window.startGame(predefined_state=level_state)
         self.parent_window.hide() 
         self.hide()
+        
+####### СОБЫТИЯ #######

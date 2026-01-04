@@ -1,13 +1,9 @@
 # ui/main_menu.py
 
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton
-from PyQt5.QtWidgets import QMessageBox, QLabel, QDialog
+from PyQt5.QtWidgets import QLabel, QDialog
 from PyQt5.QtCore import Qt
 from ui.style import COSMIC_STYLE
-from ui.network_client import send_request
-
-import socket
-import json
 
 class MainMenuWindow(QMainWindow):
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
@@ -22,7 +18,7 @@ class MainMenuWindow(QMainWindow):
         self.init_ui()
 
         self.game_window = None  # ссылка на игровое окно
-        self.achievements_window = None  # ссылка на окно достижений
+        self.statistics_window = None  # ссылка на окно достижений
         self.campaign_window = None # ссылка на окно кампании
 
     def init_ui(self):
@@ -40,7 +36,7 @@ class MainMenuWindow(QMainWindow):
         # Объяляем кнопки
         btn_random = QPushButton("🎲 Случайный уровень")
         btn_campaign = QPushButton("📜 Кампания")
-        btn_achievements = QPushButton("🏆 Достижения")
+        btn_achievements = QPushButton("🏆 Статистика")
         btn_settings = QPushButton("⚙️ Настройки")
         btn_exit = QPushButton("🚪 Выход")
 
@@ -54,7 +50,7 @@ class MainMenuWindow(QMainWindow):
         # Подключаем сигналы
         btn_random.clicked.connect(self.start_random_level)
         btn_campaign.clicked.connect(self.show_campaign_map)
-        btn_achievements.clicked.connect(self.show_achievements)
+        btn_achievements.clicked.connect(self.show_statistics)
         btn_exit.clicked.connect(self.close)
 
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
@@ -62,14 +58,14 @@ class MainMenuWindow(QMainWindow):
 
 
 ####### СОБЫТИЯ #######
-    def show_achievements(self):
-        from ui.achievements_window import AchievementsWindow
-        self.achievements_window = AchievementsWindow(
+    def show_statistics(self):
+        from ui.statistics_window import StatisticsWindow
+        self.statistics_window = StatisticsWindow(
             username=self.username,
             stats=self.stats,
             parent=self
         )
-        self.achievements_window.show()
+        self.statistics_window.show()
         self.hide()
 
     def show_campaign_map(self):
@@ -89,7 +85,7 @@ class MainMenuWindow(QMainWindow):
         from ui.game_window import GameWindow
         if self.game_window:
             self.game_window.close()
-        self.game_window = GameWindow(parent=self, game_options=options, campaign=False, level_id=0)
+        self.game_window = GameWindow(username=self.username, parent=self, game_options=options, campaign=False, level_id=0)
         self.game_window.startGame()
         self.game_window.show()
         self.hide()
@@ -99,9 +95,9 @@ class MainMenuWindow(QMainWindow):
         if self.game_window is not None:
             self.game_window.close()
             self.game_window = None
-        if self.achievements_window is not None:
-            self.achievements_window.close()
-            self.achievements_window = None
+        if self.statistics_window is not None:
+            self.statistics_window.close()
+            self.statistics_window = None
         if self.campaign_window is not None:
             self.campaign_window.close()
             self.campaign_window = None

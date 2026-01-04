@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 import random
+from ui.network_client import send_request
 
 @dataclass
 class GameOptions:
@@ -36,9 +37,10 @@ class GameState:
     CRAFT = -5
     CRYSTAL = -4
 
-    def __init__(self, rows: int = 10, cols: int = 14, options: GameOptions = None):
+    def __init__(self, username, rows: int = 10, cols: int = 14, options: GameOptions = None):
         self.rows = rows
         self.cols = cols
+        self.username = username
         self.options = options or GameOptions()
         self.grid: List[List[int]] = [[0] * cols for _ in range(rows)]
         self.frozen: List[List[int]] = [[0] * cols for _ in range(rows)]
@@ -49,7 +51,8 @@ class GameState:
         self.lives = 1 if self.options.hardcore else 2
         self.crystals = 0
         self.craftedCells = 0
-        self.skips_remaining = self.options.max_skips  # счетчик пропусков хода
+        self.skips_remaining = self.options.max_skips
+
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
 
 
@@ -97,6 +100,7 @@ class GameState:
         if n % 2 == 0:
             return n // 2
         return 3 * n + 1
+    
 ####### ФУНКЦИИ #######
 
 
@@ -149,14 +153,14 @@ class GameState:
                         if 0 <= nr < self.rows and 0 <= nc < self.cols and new_grid[nr][nc] > 4:
                             new_frozen[nr][nc] = 1
 
-        # Обновление заморозки
+        # Обновление урона
         for r in range(self.rows):
             for c in range(self.cols):
                 new_damage[r][c] = 0
         for r in range(self.rows):
             for c in range(self.cols):
-                # Опция: randomize_at_4
-                if self.options.four_steals_neighbors and self.options.randomize_at_4 and new_grid[r][c] == 4:
+                # Опция: four_steals_neighbors
+                if self.options.four_steals_neighbors and (new_grid[r][c] == 4 or new_grid[r][c] == 2 or new_grid[r][c] == 1):
                     # Заморозим соседей (запомним координаты)
                     for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
                         nr, nc = r + dr, c + dc
@@ -178,14 +182,7 @@ class GameState:
         state_live = True
         self.player_pos = (nr, nc)
         cell = self.grid[nr][nc]
-        damage = 0
-        # Опция: randomize_at_4
-        if self.options.randomize_at_4:
-            # Заморозим соседей (запомним координаты)
-            for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
-                nnr, nnc = r + dr, c + dc
-                if 0 <= nnr < self.rows and 0 <= nnc < self.cols:
-                    damage += 1
+        damage = self.damage[nr][nc]
 
         if cell == self.CRYSTAL:
             self.crystals += 1
@@ -193,8 +190,23 @@ class GameState:
                 self.options.min_initial_value,
                 self.options.max_initial_value
             )
+            request = {
+                "action": "update_stats",
+                "username": self.parent.username,
+                "stat_type": "crystals",
+                "operation": "increment",
+                "value": 1
+            }
+            response = send_request(request, self)
         elif cell == self.CRAFT:
             # Логика крафта (временно просто фиксируем)
+            
+            # request = {
+            #     "action": "update_stats",
+            #     "username": self.parent.username,
+            #     "stat_type": "craft_cells"
+            # }
+            # response = send_request(request, self)
             pass
         elif cell <= 0 and cell != self.START_FIN_CELL:
             self.lives = -1  # Пустота или boost = смерть
@@ -207,16 +219,16 @@ class GameState:
             state_live = False
             return -3
 
+        # Если в ячейке наносится урон
+        if damage > 0 and state_live == True:
+            self.lives -= 1
+            state_live = False
         # Проверка смерти
         if self.lives <= 0:
             return -1
         # Если потеряна жизнь
         if state_live == False:
             return 2
-        # Если в ячейке наносится урон
-        # if damage > 0:
-        #     self.lives -= 1
-        #     return 2
         # Нет изменений
         return 1
     

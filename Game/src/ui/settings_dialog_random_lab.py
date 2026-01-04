@@ -43,8 +43,8 @@ class SettingsDialoRandomLab(QDialog):
         range_layout.addWidget(self.min_val_spin)
         range_layout.addWidget(QLabel("Макс. число:"))
         range_layout.addWidget(self.max_val_spin)
-        self.min_val_spin.valueChanged.connect(self._validate_range)
-        self.max_val_spin.valueChanged.connect(self._validate_range)
+        self.min_val_spin.valueChanged.connect(self.validate_range)
+        self.max_val_spin.valueChanged.connect(self.validate_range)
         layout.addLayout(range_layout)
 
         info_label = QLabel(f"ℹ️ Количество пропусков хода («Следующий шаг»): {self.options.max_skips}")
@@ -98,7 +98,7 @@ class SettingsDialoRandomLab(QDialog):
 
 
 ####### ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ #######
-    def _validate_range(self):
+    def validate_range(self):
         if self.min_val_spin.value() > self.max_val_spin.value():
             self.max_val_spin.setValue(self.min_val_spin.value())
 

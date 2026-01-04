@@ -21,56 +21,18 @@ def save_users(users):
 
 users_db = load_users()
 
-def handle_client(conn, addr):
-    print(f"[SERVER] Подключение от {addr}")
-    try:
-        while True:
-            data = conn.recv(1024).decode("utf-8")
-            if not data:  # ← исправлено: проверяем, что данные получены
-                break
+####### ОБРАБОТКА ЗАПРОСОВ #######
+# Разрешённые поля для инкремента
 
-            request = json.loads(data)
-            action = request.get("action")
-            username = request.get("username")
-
-            # --- ГАРАНТИРУЕМ, ЧТО У ПОЛЬЗОВАТЕЛЯ ЕСТЬ ВСЕ НУЖНЫЕ ПОЛЯ ---
-            if username and username in users_db:
-                stats = users_db[username]["stats"]
-
-                # Миграция: добавляем недостающие поля
-                if "random_wins" not in stats:
-                    stats["random_wins"] = 0
-                if "last_completed_level" not in stats:
-                    stats["last_completed_level"] = 0
-                if "deaths" not in stats:
-                    stats["deaths"] = 0
-                if "deaths_from_black_hole" not in stats:
-                    stats["deaths_from_black_hole"] = 0
-
-            if action == "login":
-                response = handle_login(request)
-            elif action == "register":
-                response = handle_register(request)
-            elif action == "get_stats":
-                response = handle_get_stats(request)
-            elif action == "update_stats":
-                response = handle_update_stats(request)
-            elif action == "update_campaign_level":
-                response = handle_update_campaign_level(request)
-            elif action == "record_death":
-                response = handle_record_death(request)
-            elif action == "record_black_hole_death":
-                response = record_black_hole_death(request)
-            else:
-                response = {"status": "error", "message": "Неизвестное действие"}
-
-            conn.send(json.dumps(response).encode("utf-8"))
-
-    except Exception as e:
-        print(f"[ERROR] {e}")
-    finally:
-        conn.close()
-        print(f"[SERVER] Соединение с {addr} закрыто")
+ALLOWED_INCREMENT_STATS = {
+    "random_wins",
+    "deaths",
+    "deaths_from_black_hole",
+    "crystals",
+    "craft_cells",
+    "lives", 
+    "max_skips"
+}
 
 def handle_login(request):
     username = request["username"]
@@ -92,10 +54,14 @@ def handle_register(request):
     else:
         users_db[username] = {"password": password,
             "stats": {
+                "lives": 2,
+                "max_skips": 2,
                 "random_wins": 0,
                 "last_completed_level": 0,
                 "deaths": 0,
-                "deaths_from_black_hole": 0
+                "deaths_from_black_hole": 0,
+                "crystals": 0,
+                "craft_cells": 0
             }
         }
         save_users(users_db)
@@ -116,18 +82,39 @@ def handle_get_stats(request):
         return {"status": "error", "message": "Пользователь не найден"}
 
 def handle_update_stats(request):
-    username = request["username"]
-    stat_type = request.get("stat_type", "random_wins")
-    if username in users_db:
-        users_db[username]["stats"][stat_type] = users_db[username]["stats"].get(stat_type, 0) + 1
-        save_users(users_db)
-        return {
-            "status": "success",
-            "message": f"Статистика '{stat_type}' обновлена",
-            "stats": users_db[username]["stats"]
-        }
-    else:
+    username = request.get("username")
+    stat_type = request.get("stat_type")
+    value = request.get("value", 1)  # по умолчанию +1
+    operation = request.get("operation", "increment")  # "increment" или "set"
+
+    if not username or not stat_type:
+        return {"status": "error", "message": "Требуется username и stat_type"}
+
+    if username not in users_db:
         return {"status": "error", "message": "Пользователь не найден"}
+
+    stats = users_db[username]["stats"]
+
+    # --- Инкремент (по умолчанию) ---
+    if operation == "increment":
+        if stat_type not in ALLOWED_INCREMENT_STATS:
+            return {"status": "error", "message": f"Нельзя инкрементировать '{stat_type}'"}
+        current = stats.get(stat_type, 0)
+        stats[stat_type] = current + value
+
+    # --- Установка значения ---
+    elif operation == "set":
+        stats[stat_type] = value
+
+    else:
+        return {"status": "error", "message": "Операция должна быть 'increment' или 'set'"}
+
+    save_users(users_db)
+    return {
+        "status": "success",
+        "message": f"Статистика '{stat_type}' обновлена",
+        "stats": stats
+    }
 
 def handle_update_campaign_level(request):
     username = request["username"]
@@ -161,7 +148,7 @@ def handle_record_death(request):
     else:
         return {"status": "error", "message": "Пользователь не найден"}
 
-def record_black_hole_death(request):
+def handle_record_black_hole_death(request):
     username = request["username"]
     if username in users_db:
         users_db[username]["stats"]["deaths_from_black_hole"] += 1
@@ -174,6 +161,66 @@ def record_black_hole_death(request):
         }
     else:
         return {"status": "error", "message": "Пользователь не найден"}
+    
+ACTION_HANDLERS = {
+    "login": handle_login,
+    "register": handle_register,
+    "update_stats": handle_update_stats,
+    "update_campaign_level": handle_update_campaign_level,
+    "record_death": handle_record_death,
+    "record_black_hole_death": handle_record_black_hole_death,
+    "get_stats": handle_get_stats,
+}
+
+def handle_client(conn, addr):
+    print(f"[SERVER] Подключение от {addr}")
+    try:
+        while True:
+            data = conn.recv(1024).decode("utf-8")
+            if not data:  # ← исправлено: проверяем, что данные получены
+                break
+
+            request = json.loads(data)
+            action = request.get("action")
+            username = request.get("username")
+
+            # --- ГАРАНТИРУЕМ, ЧТО У ПОЛЬЗОВАТЕЛЯ ЕСТЬ ВСЕ НУЖНЫЕ ПОЛЯ ---
+            if username and username in users_db:
+                stats = users_db[username]["stats"]
+
+                # Миграция: добавляем недостающие поля
+                if "random_wins" not in stats:
+                    stats["random_wins"] = 0
+                if "last_completed_level" not in stats:
+                    stats["last_completed_level"] = 0
+                if "deaths" not in stats:
+                    stats["deaths"] = 0
+                if "deaths_from_black_hole" not in stats:
+                    stats["deaths_from_black_hole"] = 0
+                if "lives" not in stats:
+                    stats["lives"] = 2
+                if "max_skips" not in stats:
+                    stats["max_skips"] = 2
+                if "craft_cells" not in stats:
+                    stats["craft_cells"] = 0
+                if "crystals" not in stats:
+                    stats["crystals"] = 0
+
+            # Обработка действия
+            handler = ACTION_HANDLERS.get(action)
+            if handler:
+                response = handler(request)
+            else:
+                response = {"status": "error", "message": "Неизвестное действие"}
+
+            conn.send(json.dumps(response).encode("utf-8"))
+
+    except Exception as e:
+        print(f"[ERROR] {e}")
+    finally:
+        conn.close()
+        print(f"[SERVER] Соединение с {addr} закрыто")
+####### СОБЫТИЯ #######
 
 def start_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

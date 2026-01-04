@@ -84,10 +84,6 @@ class GameView(QGraphicsView):
                     self.scene.addItem(number_text)
 
         # 2. Рисуем игрока (синий квадрат)
-        # pr, pc = self.game_state.player_pos
-        # player = QGraphicsRectItem(pc * cell_size + 5, pr * cell_size + 5, cell_size - 10, cell_size - 10)
-        # player.setBrush(QColor(0, 0, 255))  # синий
-        # self.scene.addItem(player)
         player_text = QGraphicsTextItem("🛸")
         player_text.setFont(QFont("Arial", 16, QFont.Bold))
         player_text.setPos(

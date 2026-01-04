@@ -3,7 +3,7 @@
 from core.game_state import GameOptions, GameState
 import random
 
-def get_level_1() -> GameState:
+def get_level_1(username) -> GameState:
     """
     Уровень 1 кампании: Введение в чётные и нечётные числа.
     Размер: 5x5, нет кристаллов, базовые числа.
@@ -16,7 +16,7 @@ def get_level_1() -> GameState:
         max_skips=3  # даём больше пропусков для обучения
     )
     
-    game_state = GameState(rows=options.rows, cols=options.cols, options=options)
+    game_state = GameState(username=username, rows=options.rows, cols=options.cols, options=options)
     
     # Фиксированная сетка для обучения
     fixed_grid = [

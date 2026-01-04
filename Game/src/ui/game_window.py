@@ -3,19 +3,15 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QLabel, QPushButton, QMessageBox
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QGroupBox, QGridLayout
 from PyQt5.QtCore import Qt
-from core.game_state import GameState
 from ui.game_view import GameView
-from core.game_state import GameOptions
 from ui.style import COSMIC_STYLE
 from ui.network_client import send_request
 
-import socket
-import json
-
 class GameWindow(QMainWindow):
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
-    def __init__(self, parent=None, game_options=None, campaign=False, level_id=0):
+    def __init__(self, username, parent=None, game_options=None, campaign=False, level_id=0):
         super().__init__(parent)
+        self.username = username
         self.parent = parent
         self.setStyleSheet(COSMIC_STYLE)
         self.game_options = game_options
@@ -32,7 +28,6 @@ class GameWindow(QMainWindow):
         # Главный вертикальный макет
         main_layout = QVBoxLayout()
         central_widget = QWidget()
-        # self.setWindowFlags(Qt.FramelessWindowHint)
         central_widget.setStyleSheet("background-color: #0F1426;")
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
@@ -166,7 +161,9 @@ class GameWindow(QMainWindow):
             request = {
                 "action": "update_stats",
                 "username": self.parent.username,
-                "stat_type": "random_wins"
+                "stat_type": "random_wins",
+                "operation": "increment",
+                "value": 1
             }
         response = send_request(request, self)
         if response and response["status"] == "success":
@@ -174,7 +171,6 @@ class GameWindow(QMainWindow):
             QMessageBox.information(self, "Победа!", "Вы достигли финиша!\nСтатистика обновлена!")
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось обновить статистику на сервере.")
-
 
     def handle_defeat(self):
         """Обработка проигрыша."""
@@ -215,6 +211,7 @@ class GameWindow(QMainWindow):
             self.m_infoLabel.setText("Повезло, играем дальше! 🔄 Поле обновлено")
         elif (state == -1):
             self.m_infoLabel.setText("Смерть!")
+            
 ####### СОСТОЯНИЯ #######
 
 
@@ -282,11 +279,22 @@ class GameWindow(QMainWindow):
         else:
             from core.game_state import GameState
             self.m_gameState = GameState(
+                username=self.username,
                 rows=self.game_options.rows,
                 cols=self.game_options.cols,
                 options=self.game_options
             )
             self.m_gameState.generate_initial_grid()
+        
+        if hasattr(self.parent, 'stats'):
+            stats = self.parent.stats
+
+            if not self.m_gameState.options.hardcore:
+                self.m_gameState.lives = stats.get("lives", 2)
+
+            server_skips = stats.get("max_skips", 2)
+            self.m_gameState.skips_remaining = server_skips
+
         self.m_glWidget.game_state = self.m_gameState
         self.m_glWidget.update_view()
         self.update_hud()
