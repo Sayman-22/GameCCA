@@ -62,19 +62,18 @@ class GameWindow(QMainWindow):
         legend_group = QGroupBox("Легенда")
         legend_layout = QVBoxLayout(legend_group)
 
-        # Создадим список пар (цвет, текст)
+        # Создаём строки легенды
         legend_items = [
-            ("#00FF00", "Чётное число"),
-            ("#FF0000", "Нечётное число"),
-            ("#FFFF00", "Цикл (1, 2, 4)"),
-            ("#0000FF", "Старт / Финиш"),
-            ("#B400FF", "Кристалл"),
-            ("#FFA500", "Крафт"),
-            ("#000000", "Пустота")
+            ("#1A2332", "🌍 Чётное число"),
+            ("#8B2E3C", "💥 Нечётное число"),
+            ("#C07B3B", "🕳️ Цикл (1, 2, 4)"),
+            ("#2A4B8C", "🔵 Старт / Финиш"),
+            ("#6A4C93", "💎 Кристалл"),
+            ("#B5651D", "🛠️ Крафт"),
+            ("#000000", "⬛ Пустота")
         ]
 
         for color_hex, text in legend_items:
-            # Создаем виджет-контейнер для строки легенды
             row_widget = QWidget()
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(0, 0, 0, 0)
@@ -87,7 +86,7 @@ class GameWindow(QMainWindow):
 
             # Текст
             label_text = QLabel(text)
-            label_text.setStyleSheet("padding-left: 5px;")
+            label_text.setStyleSheet("padding-left: 5px; color: #C0D0FF;")
 
             row_layout.addWidget(color_square)
             row_layout.addWidget(label_text)

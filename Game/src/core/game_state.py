@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List
 import random
 from ui.network_client import send_request
+from PyQt5.QtWidgets import QMessageBox
 
 @dataclass
 class GameOptions:
@@ -114,58 +115,13 @@ class GameState:
         new_damage = [row[:] for row in self.damage]
 
         # Опция: randomize_at_4
-        if self.options.randomize_at_4:
-            for y in range(self.rows):
-                for x in range(self.cols):
-                    if self.grid[y][x] == 4:
-                        self.grid[y][x] = random.randint(
-                            self.options.min_initial_value,
-                            self.options.max_initial_value
-                        )
-
+        self.action_randomize_at_4()
         # Обновление ячеек
-        for r in range(self.rows):
-            for c in range(self.cols):
-                val = self.grid[r][c]
-                if val <= 0:  # статические ячейки не обновляются
-                    continue
-                if new_frozen[r][c]:  # статические ячейки не обновляются
-                    continue
-
-                # Применяем базовое правило Коллатца
-                if val % 2 == 0:
-                    new_val = val // 2
-                else:
-                    new_val = 3 * val + 1
-                new_grid[r][c] = new_val
-
+        self.update_all_cell(new_grid, new_frozen)
         # Обновление заморозки
-        for r in range(self.rows):
-            for c in range(self.cols):
-                new_frozen[r][c] = 0
-        for r in range(self.rows):
-            for c in range(self.cols):
-                # Опция: four_steals_neighbors
-                if self.options.four_steals_neighbors and self.options.randomize_at_4 and new_grid[r][c] == 4:
-                    # Заморозим соседей (запомним координаты)
-                    for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < self.rows and 0 <= nc < self.cols and new_grid[nr][nc] > 4:
-                            new_frozen[nr][nc] = 1
-
+        self.update_frozen_cell(new_grid, new_frozen)
         # Обновление урона
-        for r in range(self.rows):
-            for c in range(self.cols):
-                new_damage[r][c] = 0
-        for r in range(self.rows):
-            for c in range(self.cols):
-                # Опция: four_steals_neighbors
-                if self.options.four_steals_neighbors and (new_grid[r][c] == 4 or new_grid[r][c] == 2 or new_grid[r][c] == 1):
-                    # Заморозим соседей (запомним координаты)
-                    for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < self.rows and 0 <= nc < self.cols:
-                            new_damage[nr][nc] = 1
+        self.update_damage_cell(new_grid, new_damage)
 
         # Новое поле
         self.frozen = new_frozen
@@ -185,19 +141,7 @@ class GameState:
         damage = self.damage[nr][nc]
 
         if cell == self.CRYSTAL:
-            self.crystals += 1
-            self.grid[nr][nc] = random.randint(
-                self.options.min_initial_value,
-                self.options.max_initial_value
-            )
-            request = {
-                "action": "update_stats",
-                "username": self.parent.username,
-                "stat_type": "crystals",
-                "operation": "increment",
-                "value": 1
-            }
-            response = send_request(request, self)
+            self.update_crystals(nr, nc)
         elif cell == self.CRAFT:
             # Логика крафта (временно просто фиксируем)
             
@@ -233,3 +177,80 @@ class GameState:
         return 1
     
 ####### ДВИЖЕНИЕ #######
+
+
+####### ФУНКЦИИ #######
+    def action_randomize_at_4(self):
+        if self.options.randomize_at_4:
+            for y in range(self.rows):
+                for x in range(self.cols):
+                    if self.grid[y][x] == 4:
+                        self.grid[y][x] = random.randint(
+                            self.options.min_initial_value,
+                            self.options.max_initial_value
+                        )
+                        
+    def update_all_cell(self, new_grid, new_frozen):
+        for r in range(self.rows):
+            for c in range(self.cols):
+                val = self.grid[r][c]
+                if val <= 0:  # статические ячейки не обновляются
+                    continue
+                if new_frozen[r][c]:  # замороженные ячейки не обновляются
+                    continue
+
+                # Применяем базовое правило Коллатца
+                if val % 2 == 0:
+                    new_val = val // 2
+                else:
+                    new_val = 3 * val + 1
+                new_grid[r][c] = new_val
+                        
+    def update_frozen_cell(self, new_grid, new_frozen):
+        for r in range(self.rows):
+            for c in range(self.cols):
+                new_frozen[r][c] = 0
+        for r in range(self.rows):
+            for c in range(self.cols):
+                # Опция: four_steals_neighbors
+                if self.options.four_steals_neighbors and self.options.randomize_at_4 and new_grid[r][c] == 4:
+                    # Заморозим соседей (запомним координаты)
+                    for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < self.rows and 0 <= nc < self.cols and new_grid[nr][nc] > 4:
+                            new_frozen[nr][nc] = 1
+                        
+    def update_damage_cell(self, new_grid, new_damage):
+        for r in range(self.rows):
+            for c in range(self.cols):
+                new_damage[r][c] = 0
+        for r in range(self.rows):
+            for c in range(self.cols):
+                # Опция: four_steals_neighbors
+                if self.options.four_steals_neighbors and (new_grid[r][c] == 4 or new_grid[r][c] == 2 or new_grid[r][c] == 1):
+                    # Заморозим соседей (запомним координаты)
+                    for dr, dc in [(-1,0), (1,0), (0,-1), (0,1)]:
+                        nr, nc = r + dr, c + dc
+                        if 0 <= nr < self.rows and 0 <= nc < self.cols:
+                            new_damage[nr][nc] = 1
+                        
+    def update_crystals(self, nr, nc):
+        self.crystals += 1
+        self.grid[nr][nc] = random.randint(
+            self.options.min_initial_value,
+            self.options.max_initial_value
+        )
+        request = {
+            "action": "update_stats",
+            "username": self.username,
+            "stat_type": "crystals",
+            "operation": "increment",
+            "value": 1
+        }
+        response = send_request(request, self)
+        if response and response["status"] == "success":
+            self.stats = response["stats"]
+        else:
+            QMessageBox.warning(self, "Ошибка", "Не удалось обновить статистику на сервере.")
+
+####### ФУНКЦИИ #######
