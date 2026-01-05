@@ -29,7 +29,8 @@ class GameOptions:
     hardcore: bool = False
     fog_of_war: bool = False
     disable_regen_at_1: bool = False
-    max_skips: int = 200  # количество пропусков хода
+    max_skips: int = 2  # количество пропусков хода
+    pressure_tolerance: int = 200  # допустимое давление
 
 class GameState:
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
@@ -53,6 +54,7 @@ class GameState:
         self.crystals = 0
         self.craftedCells = 0
         self.skips_remaining = self.options.max_skips
+        self.pressure_tolerance = self.options.pressure_tolerance
 
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
 
@@ -153,15 +155,18 @@ class GameState:
             # response = send_request(request, self)
             pass
         elif cell <= 0 and cell != self.START_FIN_CELL:
-            self.lives = -1  # Пустота или boost = смерть
-            state_live = False
-        elif cell % 2 == 1 and cell not in (1, 2, 4) and cell != self.START_FIN_CELL:  # Нечётное
-            self.lives -= 1
+            self.lives = -1
             state_live = False
         elif cell in (1, 2, 4):  # Цикл
             self.lives = 0
             state_live = False
             return -3
+        elif cell % 2 == 1 and cell != self.START_FIN_CELL:  # Нечётное
+            self.lives -= 1
+            state_live = False
+        elif cell > self.pressure_tolerance: # превышение допустимого давления
+            self.lives -= 1
+            state_live = False
 
         # Если в ячейке наносится урон
         if damage > 0 and state_live == True:

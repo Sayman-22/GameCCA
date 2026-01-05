@@ -60,6 +60,7 @@ def handle_register(request):
                 "last_completed_level": 0,
                 "deaths": 0,
                 "deaths_from_black_hole": 0,
+                "pressure_tolerance": 200,
                 "crystals": 0,
                 "craft_cells": 0
             }
@@ -205,6 +206,9 @@ def handle_client(conn, addr):
                     stats["craft_cells"] = 0
                 if "crystals" not in stats:
                     stats["crystals"] = 0
+                if "pressure_tolerance" not in stats:
+                    stats["pressure_tolerance"] = 200
+                    
 
             # Обработка действия
             handler = ACTION_HANDLERS.get(action)

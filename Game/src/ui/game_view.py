@@ -60,7 +60,7 @@ class GameView(QGraphicsView):
 
 
 ####### ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ #######
-    def get_color(self, value):
+    def get_color(self, value, pressure_tolerance):
         if value == GameState.START_FIN_CELL:
             return QBrush(QColor("#2A4B8C"))  # тёмно-синий (старт/финиш)
         if value == GameState.CRYSTAL:
@@ -71,6 +71,8 @@ class GameView(QGraphicsView):
             return QBrush(QColor("#000000"))  # чёрная пустота
         if value in (1, 2, 4):
             return QBrush(QColor("#C07B3B"))  # тусклый оранжевый (цикл)
+        if value > pressure_tolerance:
+            return QBrush(QColor("#FF4444"))  # превышение допустимого давления
         if value % 2 == 0:
             return QBrush(QColor("#1A2332"))  # почти фон (чётные)
         else:
@@ -82,7 +84,7 @@ class GameView(QGraphicsView):
             for c in range(self.game_state.cols):
                 value = self.game_state.grid[r][c]
                 item = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
-                item.setBrush(self.get_color(value))
+                item.setBrush(self.get_color(value, self.game_state.pressure_tolerance))
                 self.scene.addItem(item)
 
                 # Текст для обычных числовых ячеек (не спец.)
@@ -96,9 +98,30 @@ class GameView(QGraphicsView):
                 elif value == GameState.START_FIN_CELL:
                     # Старт/Финиш — уже отрисовываются отдельно, можно пропустить
                     pass
-                # --- Отображение эмодзи и числа для числовых ячеек ---
+                elif value > self.game_state.pressure_tolerance and (r, c) != self.game_state.player_pos:   # не рисуем, если там герой
+                    self.update_pressure_tolerance(cell_size, value, r, c)
                 elif value > 0 and (r, c) != self.game_state.player_pos:  # не рисуем, если там герой
                     self.update_point_cell(cell_size, value, r, c)
+
+    def update_pressure_tolerance(self, cell_size, value, r, c):
+        emoji_text = QGraphicsTextItem("⏲️")
+        emoji_text.setFont(QFont("Arial", 16, QFont.Bold))
+        emoji_text.setDefaultTextColor(Qt.white)
+        emoji_text.setPos(
+            c * cell_size + cell_size / 2 - emoji_text.boundingRect().width() / 2,
+            r * cell_size + cell_size / 2 - emoji_text.boundingRect().height() / 2
+        )
+        self.scene.addItem(emoji_text)
+
+        # Число в правом верхнем углу
+        num_item = QGraphicsTextItem(str(value))
+        num_item.setFont(QFont("Arial", 4, QFont.Bold))
+        num_item.setDefaultTextColor(Qt.white)
+        num_item.setPos(
+            c * cell_size + cell_size - num_item.boundingRect().width(),
+            r * cell_size + 0
+        )
+        self.scene.addItem(num_item)
 
     def update_crystals_cell(self, cell_size, r, c):
         emoji = QGraphicsTextItem("💎")

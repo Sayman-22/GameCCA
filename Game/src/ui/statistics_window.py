@@ -31,9 +31,11 @@ class StatisticsWindow(QMainWindow):
         # --- Текущие ресурсы ---
         lives = self.stats.get("lives", 2)
         skips = self.stats.get("max_skips", 2)
+        pressure = self.stats.get("pressure_tolerance", 200)
         deaths = self.stats.get("deaths", 0)
         layout.addWidget(QLabel(f"❤️ Текущее количество жизней: {lives}"))
         layout.addWidget(QLabel(f"⏭️ Допустимых пропусков хода: {skips}"))
+        layout.addWidget(QLabel(f"⏲️ Допустимое давление: {pressure}"))
         layout.addWidget(QLabel(f"💀 Всего смертей: {deaths}"))
         layout.addSpacing(20)
 

@@ -49,11 +49,13 @@ class GameWindow(QMainWindow):
         # HUD: Жизни, кристаллы, крафт (без m_infoLabel)
         self.m_lifeLabel = QLabel("❤️ Жизни: 2")
         self.m_skipLabel = QLabel("⏭️ Пропуски: 2")
+        self.m_pressureLabel = QLabel("⏲️ Давление: 200")
         self.m_crystalLabel = QLabel("💎 Кристаллы: 0")
         self.m_craftLabel = QLabel("🛠️ Крафт: 0")
 
         right_layout.addWidget(self.m_lifeLabel)
         right_layout.addWidget(self.m_skipLabel)
+        right_layout.addWidget(self.m_pressureLabel)
         right_layout.addWidget(self.m_crystalLabel)
         right_layout.addWidget(self.m_craftLabel)
         right_layout.addStretch()
@@ -68,6 +70,7 @@ class GameWindow(QMainWindow):
             ("#8B2E3C", "💥 Нечётное число"),
             ("#C07B3B", "🕳️ Цикл (1, 2, 4)"),
             ("#2A4B8C", "🔵 Старт / Финиш"),
+            ("#FF4444", "⏲️ Давление"),
             ("#6A4C93", "💎 Кристалл"),
             ("#B5651D", "🛠️ Крафт"),
             ("#000000", "⬛ Пустота")
@@ -145,6 +148,7 @@ class GameWindow(QMainWindow):
         """Обновляет все элементы HUD."""
         self.m_lifeLabel.setText(f"❤️ Жизни: {self.m_gameState.lives}")
         self.m_skipLabel.setText(f"⏭️ Пропуски: {self.m_gameState.skips_remaining}")
+        self.m_pressureLabel.setText(f"⏲️ Давление: {self.m_gameState.pressure_tolerance}")
         self.m_crystalLabel.setText(f"💎 Кристаллы: {self.m_gameState.crystals}")
         self.m_craftLabel.setText(f"🛠️ Крафт: {self.m_gameState.craftedCells}")
 
@@ -205,7 +209,7 @@ class GameWindow(QMainWindow):
 
     def handle_message(self, state):
         if (state == 2):
-            self.m_infoLabel.setText("💔 Попали на нечётное число! -1 жизнь.")
+            self.m_infoLabel.setText("💔 -1 жизнь.")
         elif (state == 1):
             self.m_infoLabel.setText("Повезло, играем дальше! 🔄 Поле обновлено")
         elif (state == -1):
@@ -293,6 +297,9 @@ class GameWindow(QMainWindow):
 
             server_skips = stats.get("max_skips", 2)
             self.m_gameState.skips_remaining = server_skips
+            
+            pressure = stats.get("pressure_tolerance", 200)
+            self.m_gameState.pressure_tolerance = pressure
 
         self.m_glWidget.game_state = self.m_gameState
         self.m_glWidget.update_view()
