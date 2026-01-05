@@ -83,7 +83,7 @@ class GameView(QGraphicsView):
                     )
                     self.scene.addItem(number_text)
 
-        # 2. Рисуем игрока (синий квадрат)
+        # 2. Рисуем игрока
         player_text = QGraphicsTextItem("🛸")
         player_text.setFont(QFont("Arial", 16, QFont.Bold))
         player_text.setPos(
@@ -103,6 +103,34 @@ class GameView(QGraphicsView):
                 pr * cell_size + 0
             )
             self.scene.addItem(hero_number)
+
+        # 4. Отображаем "С" и "Ф" на старте и финише
+        start_r, start_c = self.game_state.start_pos
+        end_r, end_c = self.game_state.end_pos
+
+        # Старт
+        start_label = QGraphicsTextItem("🚩")
+        start_label.setFont(QFont("Arial", 7, QFont.Bold))
+        start_label.setDefaultTextColor(Qt.white)
+        start_label.setPos(
+            start_c * cell_size - start_label.boundingRect().width() / 2 + 5,
+            start_r * cell_size - cell_size / 2 + 13
+            # start_c * cell_size + cell_size / 2 - start_label.boundingRect().width() / 2,
+            # start_r * cell_size + cell_size / 2 - start_label.boundingRect().height() / 2
+        )
+        self.scene.addItem(start_label)
+
+        # Финиш
+        end_label = QGraphicsTextItem("🏁")
+        end_label.setFont(QFont("Arial", 7, QFont.Bold))
+        end_label.setDefaultTextColor(Qt.white)
+        end_label.setPos(
+            end_c * cell_size - cell_size / 2 + 15,
+            end_r * cell_size - cell_size / 2 + 13
+            # end_c * cell_size + cell_size / 2 - end_label.boundingRect().width() / 2,
+            # end_r * cell_size + cell_size / 2 - end_label.boundingRect().height() / 2
+        )
+        self.scene.addItem(end_label)
 
         self.setSceneRect(0, 0, self.game_state.cols * cell_size, self.game_state.rows * cell_size)
         self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)

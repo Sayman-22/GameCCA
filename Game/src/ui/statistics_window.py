@@ -27,9 +27,7 @@ class StatisticsWindow(QMainWindow):
         title = QLabel(f"🏆 Ваша статистика: {self.username}")
         title.setObjectName("MainMenuTitle")
         layout.addWidget(title)
-
         
-
         # --- Текущие ресурсы ---
         lives = self.stats.get("lives", 2)
         skips = self.stats.get("max_skips", 2)
@@ -59,67 +57,6 @@ class StatisticsWindow(QMainWindow):
         btn_back = QPushButton("← Назад в меню")
         btn_back.clicked.connect(self.go_back)
         layout.addWidget(btn_back)
-
-
-
-
-
-        # # Отображение статистики
-        # player_label = QLabel(f"Игрок: {self.username}")
-
-        # # Инициализация состояний
-        # random_wins = self.stats.get("random_wins", 0)
-        # last_completed = self.stats.get("last_completed_level", 0)
-        # deaths = self.stats.get("deaths", 0)
-        # black_hole_deaths = self.stats.get("deaths_from_black_hole", 0)
-        # crystals = self.stats.get("crystals", 0)
-        # crafts = self.stats.get("craft_cells", 0)
-
-        # # Создание лейблов
-        # wins_label = QLabel(f"Пройдено случайных лабиринтов: {random_wins}")
-        # campaign_label = QLabel(f"Пройдено уровней в кампании: {last_completed}")
-        # deaths_label = QLabel(f"Смертей: {deaths}")
-        # bh_label = QLabel(f"Поглощено чёрными дырами: {black_hole_deaths}")
-        # crystals_label = QLabel(f"Всего кристаллов собрано: {crystals}")
-        # crafts_label = QLabel(f"Всего крафтовых ячеек использовано: {crafts}")
-        
-        # # Запрашиваем актуальную статистику с сервера
-        # response = send_request({"action": "get_stats", "username": self.username}, self)
-        # if response and response["status"] == "success":
-        #     self.stats = response["stats"]
-
-        #     random_wins = self.stats.get("random_wins", 0)
-        #     wins_label.setText(f"Пройдено случайных лабиринтов: {random_wins}")
-
-        #     last_completed = self.stats.get("last_completed_level", 0)
-        #     campaign_label.setText(f"Пройдено уровней в кампании: {last_completed}")
-            
-        #     deaths = self.stats.get("deaths", 0)
-        #     deaths_label.setText(f"Смертей: {deaths}")
-            
-        #     black_hole_deaths = self.stats.get("deaths_from_black_hole", 0)
-        #     bh_label.setText(f"Поглощено чёрными дырами: {black_hole_deaths}")
-            
-        #     crystals = self.stats.get("crystals", 0)
-        #     crystals_label.setText(f"Всего кристаллов собрано: {crystals}")
-
-        #     crafts = self.stats.get("craft_cells", 0)
-        #     crafts_label.setText(f"Всего крафтовых ячеек использовано: {crafts}")
-
-        # # Добавление лейблов на компоновщик
-        # layout.addWidget(player_label)
-        # layout.addWidget(wins_label)
-        # layout.addWidget(campaign_label)
-        # layout.addWidget(deaths_label)
-        # layout.addWidget(bh_label)
-        # layout.addWidget(crystals_label)
-        # layout.addWidget(crafts_label)
-        # layout.addStretch()
-
-        # # Кнопка "Назад"
-        # btn_back = QPushButton("← Назад в меню")
-        # btn_back.clicked.connect(self.go_back)
-        # layout.addWidget(btn_back)
 
     def go_back(self):
         """Возврат в главное меню"""
