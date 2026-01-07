@@ -33,10 +33,14 @@ class StatisticsWindow(QMainWindow):
         skips = self.stats.get("max_skips", 2)
         pressure = self.stats.get("pressure_tolerance", 200)
         deaths = self.stats.get("deaths", 0)
+        fog_radius = self.stats.get("fog_radius", 1)
+        fog_remember = "Да" if self.stats.get("fog_remember", False) else "Нет"
         layout.addWidget(QLabel(f"❤️ Текущее количество жизней: {lives}"))
         layout.addWidget(QLabel(f"⏭️ Допустимых пропусков хода: {skips}"))
         layout.addWidget(QLabel(f"⏲️ Допустимое давление: {pressure}"))
         layout.addWidget(QLabel(f"💀 Всего смертей: {deaths}"))
+        layout.addWidget(QLabel(f"👁️ Радиус видимости: {fog_radius}"))
+        layout.addWidget(QLabel(f"🧠 Запоминать пройденное: {fog_remember}"))
         layout.addSpacing(20)
 
         crystals = self.stats.get("total_crystals_collected", 0)

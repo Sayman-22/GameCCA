@@ -62,7 +62,9 @@ def handle_register(request):
                 "deaths_from_black_hole": 0,
                 "pressure_tolerance": 200,
                 "crystals": 0,
-                "craft_cells": 0
+                "craft_cells": 0,
+                "fog_radius": 1,
+                "fog_remember": False
             }
         }
         save_users(users_db)
@@ -105,7 +107,10 @@ def handle_update_stats(request):
 
     # --- Установка значения ---
     elif operation == "set":
-        stats[stat_type] = value
+        if stat_type == "fog_remember":
+            stats[stat_type] = bool(value)
+        else:
+            stats[stat_type] = value
 
     else:
         return {"status": "error", "message": "Операция должна быть 'increment' или 'set'"}
@@ -208,6 +213,10 @@ def handle_client(conn, addr):
                     stats["crystals"] = 0
                 if "pressure_tolerance" not in stats:
                     stats["pressure_tolerance"] = 200
+                if "fog_radius" not in stats:
+                    stats["fog_radius"] = 1
+                if "fog_remember" not in stats:
+                    stats["fog_remember"] = False
                     
 
             # Обработка действия

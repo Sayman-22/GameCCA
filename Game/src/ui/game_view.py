@@ -42,7 +42,16 @@ class GameView(QGraphicsView):
         # 👾 🛰️ 👽 🌚 🌍☄️🌠 🛰︎ 🦑 🔸 💥
 
         # 1. Рисуем все ячейки
-        self.update_all_cell(cell_size)
+        for r in range(self.game_state.rows):
+            for c in range(self.game_state.cols):
+                if self.game_state.visibility[r][c]:
+                    self.update_all_cell(cell_size, r, c)
+                else:
+                    # Туман войны
+                    fog = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
+                    fog.setBrush(QColor("#305050"))  # чёрный туман
+                    self.scene.addItem(fog)
+
         # 2. Рисуем игрока
         self.update_hero(cell_size)
         # 3. Текст с числом ячейки ПОД героем
@@ -78,30 +87,37 @@ class GameView(QGraphicsView):
         else:
             return QBrush(QColor("#8B2E3C"))  # броский, но тёмный (нечётные)
         
-    def update_all_cell(self, cell_size):
+    def update_all_cell(self, cell_size, r, c):
         pr, pc = self.game_state.player_pos
-        for r in range(self.game_state.rows):
-            for c in range(self.game_state.cols):
-                value = self.game_state.grid[r][c]
-                item = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
-                item.setBrush(self.get_color(value, self.game_state.pressure_tolerance))
-                self.scene.addItem(item)
+        value = self.game_state.grid[r][c]
+        item = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
+        item.setBrush(self.get_color(value, self.game_state.pressure_tolerance))
+        self.scene.addItem(item)
 
-                # Текст для обычных числовых ячеек (не спец.)
-                if pr == r and pc == c:
-                    continue
-                
-                if value == GameState.CRYSTAL:
-                    self.update_crystals_cell(cell_size, r, c)
-                elif value == GameState.CRAFT:
-                    self.update_craft_cell(cell_size, r, c)
-                elif value == GameState.START_FIN_CELL:
-                    # Старт/Финиш — уже отрисовываются отдельно, можно пропустить
-                    pass
-                elif value > self.game_state.pressure_tolerance and (r, c) != self.game_state.player_pos:   # не рисуем, если там герой
-                    self.update_pressure_tolerance(cell_size, value, r, c)
-                elif value > 0 and (r, c) != self.game_state.player_pos:  # не рисуем, если там герой
-                    self.update_point_cell(cell_size, value, r, c)
+        # Текст для обычных числовых ячеек (не спец.)
+        if pr == r and pc == c:
+            return
+        
+        if value == GameState.CRYSTAL:
+            self.update_crystals_cell(cell_size, r, c)
+        elif value == GameState.CRAFT:
+            self.update_craft_cell(cell_size, r, c)
+        elif value == GameState.START_FIN_CELL:
+            # Старт/Финиш — уже отрисовываются отдельно, можно пропустить
+            pass
+        elif value == GameState.EMPTY:
+            void_emoji = QGraphicsTextItem("⚫")
+            void_emoji.setFont(QFont("Arial", 16, QFont.Bold))
+            void_emoji.setDefaultTextColor(Qt.white)
+            void_emoji.setPos(
+                c * cell_size + cell_size / 2 - void_emoji.boundingRect().width() / 2,
+                r * cell_size + cell_size / 2 - void_emoji.boundingRect().height() / 2
+            )
+            self.scene.addItem(void_emoji)
+        elif value > self.game_state.pressure_tolerance and (r, c) != self.game_state.player_pos:   # не рисуем, если там герой
+            self.update_pressure_tolerance(cell_size, value, r, c)
+        elif value > 0 and (r, c) != self.game_state.player_pos:  # не рисуем, если там герой
+            self.update_point_cell(cell_size, value, r, c)
 
     def update_pressure_tolerance(self, cell_size, value, r, c):
         emoji_text = QGraphicsTextItem("⏲️")
@@ -197,6 +213,9 @@ class GameView(QGraphicsView):
 
     def update_start(self, cell_size):
         start_r, start_c = self.game_state.start_pos
+        if not self.game_state.visibility[start_r][start_c]:
+            return
+        start_r, start_c = self.game_state.start_pos
         start_label = QGraphicsTextItem("🚩")
         start_label.setFont(QFont("Arial", 7, QFont.Bold))
         start_label.setDefaultTextColor(Qt.white)
@@ -208,6 +227,8 @@ class GameView(QGraphicsView):
 
     def update_finish(self, cell_size):
         end_r, end_c = self.game_state.end_pos
+        if not self.game_state.visibility[end_r][end_c]:
+            return
         end_label = QGraphicsTextItem("🏁")
         end_label.setFont(QFont("Arial", 7, QFont.Bold))
         end_label.setDefaultTextColor(Qt.white)

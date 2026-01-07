@@ -24,19 +24,25 @@ class GameOptions:
     only_even_update_if_r6: bool = False
     only_odd_update_if_r3: bool = False
     even_numbers_add_2_if_sub6: bool = False
+    generate_empty: bool = False
+    generate_empty_count = 1
 
     # Игровые свойства
     hardcore: bool = False
-    fog_of_war: bool = False
     disable_regen_at_1: bool = False
     max_skips: int = 2  # количество пропусков хода
     pressure_tolerance: int = 200  # допустимое давление
 
+    # Туман войны
+    fog_of_war: bool = False
+    visibility_radius = 1
+    remember_visibility = False
+
 class GameState:
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
     START_FIN_CELL = -1
-    EMPTY = -3
-    CRAFT = -5
+    EMPTY = -2
+    CRAFT = -3
     CRYSTAL = -4
 
     def __init__(self, username, rows: int = 10, cols: int = 14, options: GameOptions = None):
@@ -53,8 +59,10 @@ class GameState:
         self.lives = 1 if self.options.hardcore else 2
         self.crystals = 0
         self.craftedCells = 0
-        self.skips_remaining = self.options.max_skips
-        self.pressure_tolerance = self.options.pressure_tolerance
+        if self.options.fog_of_war == False:
+            self.visibility = [[True for _ in range(self.cols)] for _ in range(self.rows)]
+        else:
+            self.visibility = [[False for _ in range(cols)] for _ in range(rows)]
 
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
 
@@ -73,6 +81,22 @@ class GameState:
         # Старт и финиш
         self.grid[self.start_pos[0]][self.start_pos[1]] = self.START_FIN_CELL
         self.grid[self.end_pos[0]][self.end_pos[1]] = self.START_FIN_CELL
+
+        # --- Генерация пустоты ---
+        if self.options.generate_empty:
+            # Получаем список всех ячеек, кроме старта и финиша
+            all_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)]
+            # Удаляем старт и финиш
+            start_pos = self.start_pos
+            end_pos = self.end_pos
+            valid_cells = [pos for pos in all_cells if pos != start_pos and pos != end_pos]
+
+            # Выбираем 3 случайные ячейки
+            void_positions = random.sample(valid_cells, min(self.options.generate_empty_count, len(valid_cells)))
+
+            for r, c in void_positions:
+                if random.random() < 0.5:  # 50% шанс
+                    self.grid[r][c] = GameState.EMPTY
 
         # Кристалл (75%)
         if random.random() < 0.75:
@@ -93,6 +117,21 @@ class GameState:
     def get_player_pos(self):
         """Возвращает текущую позицию игрока как кортеж (row, col)."""
         return self.player_pos
+    
+    def update_visibility(self):
+        """Обновляет видимость вокруг игрока. Если remember_visibility=False, сбрасывает всё."""
+        if self.options.fog_of_war == False:
+            return
+        if not self.options.remember_visibility:
+            # Сбрасываем всё — видим только текущую окрестность
+            self.visibility = [[False for _ in range(self.cols)] for _ in range(self.rows)]
+
+        pr, pc = self.player_pos
+        for dr in range(-self.options.visibility_radius, self.options.visibility_radius + 1):
+            for dc in range(-self.options.visibility_radius, self.options.visibility_radius + 1):
+                r, c = pr + dr, pc + dc
+                if 0 <= r < self.rows and 0 <= c < self.cols:
+                    self.visibility[r][c] = True
 
     def collatz_step(self, n):
         """Применяет один шаг правила Коллатца."""
@@ -164,9 +203,11 @@ class GameState:
         elif cell % 2 == 1 and cell != self.START_FIN_CELL:  # Нечётное
             self.lives -= 1
             state_live = False
-        elif cell > self.pressure_tolerance: # превышение допустимого давления
+        elif cell > self.options.pressure_tolerance: # превышение допустимого давления
             self.lives -= 1
             state_live = False
+
+        self.update_visibility()
 
         # Если в ячейке наносится урон
         if damage > 0 and state_live == True:
@@ -257,5 +298,8 @@ class GameState:
             self.stats = response["stats"]
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось обновить статистику на сервере.")
+
+    def get_grid_value(self, nr, nc) -> int:
+        return self.grid[nr][nc]
 
 ####### ФУНКЦИИ #######

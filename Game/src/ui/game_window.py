@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from ui.game_view import GameView
 from ui.style import COSMIC_STYLE
 from ui.network_client import send_request
+from ui.local_ai_advisor import get_hint
 
 class GameWindow(QMainWindow):
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
@@ -118,12 +119,17 @@ class GameWindow(QMainWindow):
         self.m_btnNext = QPushButton("Следующий шаг")
         right_layout.addWidget(self.m_btnNext)
 
+        # Помощь
+        self.btn_hint = QPushButton("🤔 Помощь")
+        right_layout.addWidget(self.btn_hint)
+
         # ---- Сигналы ----
         self.m_btnUp.clicked.connect(lambda: self.onMove(-1, 0))
         self.m_btnDown.clicked.connect(lambda: self.onMove(1, 0))
         self.m_btnLeft.clicked.connect(lambda: self.onMove(0, -1))
         self.m_btnRight.clicked.connect(lambda: self.onMove(0, 1))
         self.m_btnNext.clicked.connect(self.onNextStep)
+        self.btn_hint.clicked.connect(self.on_hint_clicked)
 
         top_layout.addWidget(right_panel, 1)
         main_layout.addLayout(top_layout)
@@ -238,6 +244,13 @@ class GameWindow(QMainWindow):
         self.moveStep(0, 0)
 
     def moveStep(self, dy, dx):
+        r, c = self.m_gameState.player_pos
+        nr, nc = r + dy, c + dx
+        cell = self.m_gameState.get_grid_value(nr, nc)
+        # пустота
+        if cell == self.m_gameState.EMPTY:
+            return
+        
         # Выполняем шаг
         self.m_gameState.advance_step()
         # Обновляем интерфейс
@@ -295,13 +308,13 @@ class GameWindow(QMainWindow):
             if not self.m_gameState.options.hardcore:
                 self.m_gameState.lives = stats.get("lives", 2)
 
-            server_skips = stats.get("max_skips", 2)
-            self.m_gameState.skips_remaining = server_skips
-            
-            pressure = stats.get("pressure_tolerance", 200)
-            self.m_gameState.pressure_tolerance = pressure
+            self.m_gameState.skips_remaining = stats.get("max_skips", 2)
+            self.m_gameState.pressure_tolerance = stats.get("pressure_tolerance", 200)
+            self.m_gameState.visibility_radius = stats.get("fog_radius", 1)
+            self.m_gameState.remember_visibility = stats.get("fog_remember", False)
 
         self.m_glWidget.game_state = self.m_gameState
+        self.m_gameState.update_visibility()
         self.m_glWidget.update_view()
         self.update_hud()
 
@@ -311,4 +324,9 @@ class GameWindow(QMainWindow):
             self.parent.show_main_menu()
         self.close()
         
+    def on_hint_clicked(self):
+        if self.m_gameState:
+            hint = get_hint(self.m_gameState)
+            QMessageBox.information(self, "Совет помощника", hint)
+
 ####### СОБЫТИЯ #######
