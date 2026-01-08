@@ -38,6 +38,22 @@ class GameOptions:
     visibility_radius = 1
     remember_visibility = False
 
+    def __init__(self,
+                 mode="maze",
+                 lives=2,
+                 rows=5,
+                 cols=5,
+                 randomize_at_4=False,
+                 four_steals_neighbors=True,
+                 max_skips=2):
+        self.mode = mode
+        self.lives = lives
+        self.rows = rows
+        self.cols = cols
+        self.randomize_at_4 = randomize_at_4
+        self.four_steals_neighbors = four_steals_neighbors
+        self.max_skips = max_skips
+
 class GameState:
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
     START_FIN_CELL = -1
@@ -45,24 +61,43 @@ class GameState:
     CRAFT = -3
     CRYSTAL = -4
 
-    def __init__(self, username, rows: int = 10, cols: int = 14, options: GameOptions = None):
+    def __init__(self,
+                 username,
+                 rows, 
+                 cols, 
+                 options: GameOptions = GameOptions()):
         self.rows = rows
         self.cols = cols
         self.username = username
-        self.options = options or GameOptions()
-        self.grid: List[List[int]] = [[0] * cols for _ in range(rows)]
-        self.frozen: List[List[int]] = [[0] * cols for _ in range(rows)]
-        self.damage: List[List[int]] = [[0] * cols for _ in range(rows)]
-        self.player_pos = (0, 0)  # (row, col)
-        self.start_pos = (0, 0)
-        self.end_pos = (rows - 1, cols - 1)
-        self.lives = 1 if self.options.hardcore else 2
+        self.options = options
         self.crystals = 0
         self.craftedCells = 0
+            
+        # Режим
+        if self.options.mode == "arena":
+            self.lives = self.options.lives
+            self.rows = 10
+            self.cols = 15
+            self.generate_arena_grid()
+            self.player_pos = (int(self.rows-2), int(self.cols/2-1))  # центр нижней трети
+            self.start_pos = self.player_pos
+            self.end_pos = None  # нет финиша
+            self.move_count = 0
+            self.rows_removed = 0
+            self.level = 0
+        else:
+            self.lives = 1 if self.options.hardcore else self.options.lives
+            self.player_pos = (0, 0)  # (row, col)
+            self.start_pos = (0, 0)  # (row, col)
+            self.end_pos = (self.rows - 1, self.cols - 1)  # (row, col)
+
+        self.grid: List[List[int]] = [[0] * self.cols for _ in range(self.rows)]
+        self.frozen: List[List[int]] = [[0] * self.cols for _ in range(self.rows)]
+        self.damage: List[List[int]] = [[0] * self.cols for _ in range(self.rows)]
         if self.options.fog_of_war == False:
             self.visibility = [[True for _ in range(self.cols)] for _ in range(self.rows)]
         else:
-            self.visibility = [[False for _ in range(cols)] for _ in range(rows)]
+            self.visibility = [[False for _ in range(self.cols)] for _ in range(self.rows)]
 
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
 
@@ -80,7 +115,8 @@ class GameState:
 
         # Старт и финиш
         self.grid[self.start_pos[0]][self.start_pos[1]] = self.START_FIN_CELL
-        self.grid[self.end_pos[0]][self.end_pos[1]] = self.START_FIN_CELL
+        if not self.options.mode == "arena":
+            self.grid[self.end_pos[0]][self.end_pos[1]] = self.START_FIN_CELL
 
         # --- Генерация пустоты ---
         if self.options.generate_empty:
@@ -113,6 +149,12 @@ class GameState:
             if free_cells:
                 r, c = random.choice(free_cells)
                 self.grid[r][c] = self.CRAFT
+
+    def generate_arena_grid(self):
+        self.grid = [
+            [random.randint(10, 30) for _ in range(self.cols)]
+            for _ in range(self.rows)
+        ]
 
     def get_player_pos(self):
         """Возвращает текущую позицию игрока как кортеж (row, col)."""
@@ -169,6 +211,26 @@ class GameState:
         self.grid = new_grid
         self.damage = new_damage
 
+    def arena_next_move(self):
+        """Вызывается после каждого хода в режиме арены."""
+        if not self.options.mode == "arena":
+            return
+
+        self.move_count += 1
+        if self.move_count == 2:
+            # Удаляем нижнюю строку
+            self.grid.pop()
+            self.rows_removed += 1
+            self.level = self.rows_removed // 50
+            # Новая верхняя строка
+            max_val = 30 + 20 * self.level
+            self.grid.insert(0, [random.randint(10, max_val) for _ in range(self.cols)])
+            # Смещаем игрока
+            r, c = self.player_pos
+            self.player_pos = (r + 1, c)
+            if r - 1 < 0:
+                self.lives = 0
+            self.move_count = 0
 
     def move_player(self, dr: int, dc: int) -> int:
         r, c = self.player_pos

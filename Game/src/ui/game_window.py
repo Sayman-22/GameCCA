@@ -24,7 +24,7 @@ class GameWindow(QMainWindow):
 
     def setupUi(self):
         self.setWindowTitle("Лабиринт — Игра")
-        self.resize(1000, 700)  # немного выше, чтобы уместить всё
+        self.resize(1300, 800)  # немного выше, чтобы уместить всё
 
         # Главный вертикальный макет
         main_layout = QVBoxLayout()
@@ -213,6 +213,11 @@ class GameWindow(QMainWindow):
         QMessageBox.information(self, "Чёрная дыра", msg)
         self.return_to_main_menu()
 
+    def handle_arena_defeat(self):
+        score = self.m_gameState.rows_removed
+        QMessageBox.information(self, "Арена завершена", f"Пройдено строк: {score}")
+        self.return_to_main_menu()
+
     def handle_message(self, state):
         if (state == 2):
             self.m_infoLabel.setText("💔 -1 жизнь.")
@@ -253,29 +258,34 @@ class GameWindow(QMainWindow):
         
         # Выполняем шаг
         self.m_gameState.advance_step()
-        # Обновляем интерфейс
-        self.m_glWidget.update_view()
-
         # Производим ход в логике игры
         state = self.m_gameState.move_player(dy, dx)
-        if self.m_gameState and state > 0:
-            # Если ход успешен — обновляем ВСЁ отображение
-            self.m_glWidget.update_view()
-            self.update_hud()
-            # Проверяем победу
-            if self.m_gameState.player_pos == self.m_gameState.end_pos:
-                self.handle_victory()
+        # Обновляем интерфейс
+        self.m_glWidget.update_view()
+        # Обновляем HUD
+        self.update_hud()
+
+        # Проверяем режим
+        if self.m_gameState.options.mode == "arena":
+            if self.m_gameState.lives <= 0:
+                self.handle_arena_defeat()
+        else:
+            # Обычный режим
+            if self.m_gameState and state > 0:
+                # Проверяем победу
+                if self.m_gameState.player_pos == self.m_gameState.end_pos:
+                    self.handle_victory()
+                    # Возврат в главное меню ПОСЛЕ закрытия сообщения
+                    self.return_to_main_menu()
+            else:
+                # Если ход неудачный — проигрыш
+                if state == -3:
+                    self.handle_black_hole_death()
+                else:
+                    self.handle_defeat()
                 # Возврат в главное меню ПОСЛЕ закрытия сообщения
                 self.return_to_main_menu()
-        else:
-            # Если ход неудачный — проигрыш
-            if state == -3:
-                self.handle_black_hole_death()
-            else:
-                self.handle_defeat()
-            # Возврат в главное меню ПОСЛЕ закрытия сообщения
-            self.return_to_main_menu()
-        self.handle_message(state)
+            self.handle_message(state)
 
 ####### ПЕРЕМЕЩЕНИЕ ПО ПОЛЮ #######
 

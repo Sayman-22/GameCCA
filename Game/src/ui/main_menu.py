@@ -36,6 +36,7 @@ class MainMenuWindow(QMainWindow):
         # Объяляем кнопки
         btn_random = QPushButton("🎲 Случайный уровень")
         btn_campaign = QPushButton("📜 Кампания")
+        btn_arena = QPushButton("⚔️ Арена")
         btn_achievements = QPushButton("🏆 Статистика")
         btn_settings = QPushButton("⚙️ Настройки")
         btn_exit = QPushButton("🚪 Выход")
@@ -43,6 +44,7 @@ class MainMenuWindow(QMainWindow):
         # Кнопки на компоновщик
         layout.addWidget(btn_random)
         layout.addWidget(btn_campaign)
+        layout.addWidget(btn_arena)
         layout.addWidget(btn_achievements)
         layout.addWidget(btn_settings)
         layout.addWidget(btn_exit)
@@ -50,6 +52,7 @@ class MainMenuWindow(QMainWindow):
         # Подключаем сигналы
         btn_random.clicked.connect(self.start_random_level)
         btn_campaign.clicked.connect(self.show_campaign_map)
+        btn_arena.clicked.connect(self.start_arena)
         btn_achievements.clicked.connect(self.show_statistics)
         btn_exit.clicked.connect(self.close)
 
@@ -77,6 +80,13 @@ class MainMenuWindow(QMainWindow):
     def start_random_level(self):
         from ui.settings_dialog_random_lab import SettingsDialoRandomLab
         dialog = SettingsDialoRandomLab(self)
+        if dialog.exec_() == QDialog.Accepted:
+            options = dialog.get_options()
+            self.start_game_with_options(options)
+
+    def start_arena(self):
+        from ui.arena_settings_dialog import ArenaSettingsDialog
+        dialog = ArenaSettingsDialog(self, default_stats=self.stats)
         if dialog.exec_() == QDialog.Accepted:
             options = dialog.get_options()
             self.start_game_with_options(options)

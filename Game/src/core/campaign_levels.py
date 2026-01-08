@@ -1,7 +1,6 @@
 # core/campaign_levels.py
 
 from core.game_state import GameOptions, GameState
-import random
 
 def get_level_1(username) -> GameState:
     """
@@ -9,14 +8,18 @@ def get_level_1(username) -> GameState:
     Размер: 5x5, нет кристаллов, базовые числа.
     """
     options = GameOptions(
+        mode = "campaign",
         rows=5,
         cols=5,
-        randomize_at_4=False,  # отключим, чтобы игрок увидел 4
+        randomize_at_4=False,
         four_steals_neighbors=True,
-        max_skips=3  # даём больше пропусков для обучения
+        max_skips=2
     )
     
-    game_state = GameState(username=username, rows=options.rows, cols=options.cols, options=options)
+    game_state = GameState(username=username,
+                           rows=options.rows,
+                           cols=options.cols,
+                           options=options)
     
     # Фиксированная сетка для обучения
     fixed_grid = [

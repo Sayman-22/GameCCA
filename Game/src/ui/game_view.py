@@ -37,9 +37,11 @@ class GameView(QGraphicsView):
             return  # выходим, если состояние ещё не задано
 
         self.scene.clear()
-        cell_size = 40
+        cell_size = 60
 
         # 👾 🛰️ 👽 🌚 🌍☄️🌠 🛰︎ 🦑 🔸 💥
+
+        self.game_state.arena_next_move()
 
         # 1. Рисуем все ячейки
         for r in range(self.game_state.rows):
@@ -52,17 +54,20 @@ class GameView(QGraphicsView):
                     fog.setBrush(QColor("#305050"))  # чёрный туман
                     self.scene.addItem(fog)
 
+            
         # 2. Рисуем игрока
         self.update_hero(cell_size)
         # 3. Текст с числом ячейки ПОД героем
         self.update_text_hero(cell_size)
         # 4. Отображаем "Старт"
-        self.update_start(cell_size)
+        if not self.game_state.options.mode == "arena":
+            self.update_start(cell_size)
         # 5. Отображаем "Финиш"
-        self.update_finish(cell_size)
+        if not self.game_state.options.mode == "arena":
+            self.update_finish(cell_size)
 
         self.setSceneRect(0, 0, self.game_state.cols * cell_size, self.game_state.rows * cell_size)
-        self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
+        # self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
 ####### СОБЫТИЯ #######
 
@@ -107,7 +112,7 @@ class GameView(QGraphicsView):
             pass
         elif value == GameState.EMPTY:
             void_emoji = QGraphicsTextItem("⚫")
-            void_emoji.setFont(QFont("Arial", 16, QFont.Bold))
+            void_emoji.setFont(QFont("Arial", 14, QFont.Bold))
             void_emoji.setDefaultTextColor(Qt.white)
             void_emoji.setPos(
                 c * cell_size + cell_size / 2 - void_emoji.boundingRect().width() / 2,
@@ -121,7 +126,7 @@ class GameView(QGraphicsView):
 
     def update_pressure_tolerance(self, cell_size, value, r, c):
         emoji_text = QGraphicsTextItem("⏲️")
-        emoji_text.setFont(QFont("Arial", 16, QFont.Bold))
+        emoji_text.setFont(QFont("Arial", 14, QFont.Bold))
         emoji_text.setDefaultTextColor(Qt.white)
         emoji_text.setPos(
             c * cell_size + cell_size / 2 - emoji_text.boundingRect().width() / 2,
@@ -131,7 +136,7 @@ class GameView(QGraphicsView):
 
         # Число в правом верхнем углу
         num_item = QGraphicsTextItem(str(value))
-        num_item.setFont(QFont("Arial", 4, QFont.Bold))
+        num_item.setFont(QFont("Arial", 7, QFont.Bold))
         num_item.setDefaultTextColor(Qt.white)
         num_item.setPos(
             c * cell_size + cell_size - num_item.boundingRect().width(),
@@ -141,7 +146,7 @@ class GameView(QGraphicsView):
 
     def update_crystals_cell(self, cell_size, r, c):
         emoji = QGraphicsTextItem("💎")
-        emoji.setFont(QFont("Arial", 16, QFont.Bold))
+        emoji.setFont(QFont("Arial", 14, QFont.Bold))
         emoji.setDefaultTextColor(Qt.white)
         emoji.setPos(
             c * cell_size + cell_size / 2 - emoji.boundingRect().width() / 2,
@@ -151,7 +156,7 @@ class GameView(QGraphicsView):
 
     def update_craft_cell(self, cell_size, r, c):
         emoji = QGraphicsTextItem("⚒")
-        emoji.setFont(QFont("Arial", 16, QFont.Bold))
+        emoji.setFont(QFont("Arial", 14, QFont.Bold))
         emoji.setDefaultTextColor(Qt.white)
         emoji.setPos(
             c * cell_size + cell_size / 2 - emoji.boundingRect().width() / 2,
@@ -170,7 +175,7 @@ class GameView(QGraphicsView):
 
         # Рисуем эмодзи в центре
         emoji_text = QGraphicsTextItem(emoji)
-        emoji_text.setFont(QFont("Arial", 16, QFont.Bold))
+        emoji_text.setFont(QFont("Arial", 14, QFont.Bold))
         emoji_text.setDefaultTextColor(Qt.white)
         emoji_text.setPos(
             c * cell_size + cell_size / 2 - emoji_text.boundingRect().width() / 2,
@@ -180,7 +185,7 @@ class GameView(QGraphicsView):
 
         # Число в правом верхнем углу
         number_text = QGraphicsTextItem(str(value))
-        number_text.setFont(QFont("Arial", 4, QFont.Bold))
+        number_text.setFont(QFont("Arial", 7, QFont.Bold))
         number_text.setDefaultTextColor(Qt.white)
         number_text.setPos(
             c * cell_size + cell_size - number_text.boundingRect().width(),
@@ -191,7 +196,7 @@ class GameView(QGraphicsView):
     def update_hero(self, cell_size):
         pr, pc = self.game_state.player_pos
         player_text = QGraphicsTextItem("🛸")
-        player_text.setFont(QFont("Arial", 16, QFont.Bold))
+        player_text.setFont(QFont("Arial", 14, QFont.Bold))
         player_text.setPos(
             pc * cell_size + cell_size / 2 - player_text.boundingRect().width() / 2,
             pr * cell_size + cell_size / 2 - player_text.boundingRect().height() / 2
@@ -203,7 +208,7 @@ class GameView(QGraphicsView):
         hero_value = self.game_state.grid[pr][pc]
         if hero_value > 0:  # только для числовых ячеек
             hero_number = QGraphicsTextItem(str(hero_value))
-            hero_number.setFont(QFont("Arial", 4, QFont.Bold))
+            hero_number.setFont(QFont("Arial", 7, QFont.Bold))
             # Позиция: справа вверху ячейки
             hero_number.setPos(
                 pc * cell_size + cell_size - hero_number.boundingRect().width(),
@@ -217,11 +222,11 @@ class GameView(QGraphicsView):
             return
         start_r, start_c = self.game_state.start_pos
         start_label = QGraphicsTextItem("🚩")
-        start_label.setFont(QFont("Arial", 7, QFont.Bold))
+        start_label.setFont(QFont("Arial", 10, QFont.Bold))
         start_label.setDefaultTextColor(Qt.white)
         start_label.setPos(
-            start_c * cell_size - start_label.boundingRect().width() / 2 + 5,
-            start_r * cell_size - cell_size / 2 + 13
+            start_c * cell_size - 0.1*cell_size,
+            start_r * cell_size - 0.1*cell_size
         )
         self.scene.addItem(start_label)
 
@@ -230,11 +235,11 @@ class GameView(QGraphicsView):
         if not self.game_state.visibility[end_r][end_c]:
             return
         end_label = QGraphicsTextItem("🏁")
-        end_label.setFont(QFont("Arial", 7, QFont.Bold))
+        end_label.setFont(QFont("Arial", 10, QFont.Bold))
         end_label.setDefaultTextColor(Qt.white)
         end_label.setPos(
-            end_c * cell_size - cell_size / 2 + 15,
-            end_r * cell_size - cell_size / 2 + 13
+            end_c * cell_size - 0.1*cell_size,
+            end_r * cell_size - 0.1*cell_size
         )
         self.scene.addItem(end_label)
 ####### ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ #######
