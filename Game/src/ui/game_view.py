@@ -197,6 +197,7 @@ class GameView(QGraphicsView):
         pr, pc = self.game_state.player_pos
         player_text = QGraphicsTextItem("🛸")
         player_text.setFont(QFont("Arial", 14, QFont.Bold))
+        player_text.setDefaultTextColor(Qt.white)
         player_text.setPos(
             pc * cell_size + cell_size / 2 - player_text.boundingRect().width() / 2,
             pr * cell_size + cell_size / 2 - player_text.boundingRect().height() / 2
@@ -209,6 +210,7 @@ class GameView(QGraphicsView):
         if hero_value > 0:  # только для числовых ячеек
             hero_number = QGraphicsTextItem(str(hero_value))
             hero_number.setFont(QFont("Arial", 7, QFont.Bold))
+            hero_number.setDefaultTextColor(Qt.white)
             # Позиция: справа вверху ячейки
             hero_number.setPos(
                 pc * cell_size + cell_size - hero_number.boundingRect().width(),

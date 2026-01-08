@@ -75,7 +75,6 @@ class MainMenuWindow(QMainWindow):
         from ui.campaign_map_window import CampaignMapWindow
         self.campaign_window = CampaignMapWindow(parent=self, username=self.username)
         self.campaign_window.show()
-        # self.hide()
 
     def start_random_level(self):
         from ui.settings_dialog_random_lab import SettingsDialoRandomLab

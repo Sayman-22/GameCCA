@@ -58,7 +58,6 @@ class SettingsDialoRandomLab(QDialog):
 
         self.checkboxes = {}
         checkbox_config = [
-            ("Обновлять при достижении числа 4", "randomize_at_4"),
             ("Число 4 замораживает соседей", "four_steals_neighbors"),
             # ("Ускорение рядом с магистралью", "neighbors_affect_speed"),
             # ("Чётные замораживаются, если окружены нечётными", "even_steal_energy"),
@@ -76,6 +75,11 @@ class SettingsDialoRandomLab(QDialog):
             form.addRow(cb)
             self.checkboxes[attr] = cb
         layout.addLayout(form)
+
+        # Пустота
+        self.randomize_at_4_checkbox = QCheckBox("Обновлять при достижении числа 4")
+        self.randomize_at_4_checkbox.setChecked(True)
+        layout.addWidget(self.randomize_at_4_checkbox)
 
         # === Игровые свойства ===
         layout.addWidget(QLabel("Свойства игры:"))
@@ -135,6 +139,7 @@ class SettingsDialoRandomLab(QDialog):
         opts.min_initial_value = self.min_val_spin.value()
         opts.max_initial_value = self.max_val_spin.value()
 
+        opts.randomize_at_4 = self.randomize_at_4_checkbox.isChecked()
         opts.generate_empty = self.empty_checkbox.isChecked()
         opts.visibility_radius = self.empty_spin.value()
         opts.fog_of_war = self.fog_checkbox.isChecked()

@@ -41,6 +41,8 @@ class GameOptions:
     def __init__(self,
                  mode="maze",
                  lives=2,
+                 defense=1,
+                 freeze_cell=0,
                  rows=5,
                  cols=5,
                  randomize_at_4=False,
@@ -48,6 +50,8 @@ class GameOptions:
                  max_skips=2):
         self.mode = mode
         self.lives = lives
+        self.defense = defense
+        self.freeze_cell = freeze_cell
         self.rows = rows
         self.cols = cols
         self.randomize_at_4 = randomize_at_4
@@ -72,6 +76,12 @@ class GameState:
         self.options = options
         self.crystals = 0
         self.craftedCells = 0
+        self.defense = self.options.defense
+        self.max_skips = self.options.max_skips
+        self.pressure_tolerance = self.options.pressure_tolerance
+        self.freeze_cell = self.options.freeze_cell # доступные заряды
+        self.freeze_active = False   # активна ли заморозка в этом ходу
+        self.freeze_pos = None       # позиция замороженной ячейки
             
         # Режим
         if self.options.mode == "arena":
@@ -199,6 +209,14 @@ class GameState:
 
         # Опция: randomize_at_4
         self.action_randomize_at_4()
+        
+        # Заморозка ячейки героем
+        if self.freeze_active:
+            s, e = self.freeze_pos
+            new_frozen[s][e] = 1
+            self.freeze_active = False
+            self.freeze_pos = None
+            
         # Обновление ячеек
         self.update_all_cell(new_grid, new_frozen)
         # Обновление заморозки
@@ -232,11 +250,22 @@ class GameState:
                 self.lives = 0
             self.move_count = 0
 
+    def check_step(self, nr: int, nc: int) -> bool:
+        # за пределы границ
+        if not (0 <= nr < self.rows and 0 <= nc < self.cols):
+            return False
+
+        # пустота
+        cell = self.get_grid_value(nr, nc)
+        if cell == self.EMPTY:
+            return False
+        
+        return True
+
+
     def move_player(self, dr: int, dc: int) -> int:
         r, c = self.player_pos
         nr, nc = r + dr, c + dc
-        if not (0 <= nr < self.rows and 0 <= nc < self.cols):
-            return -2
         
         state_live = True
         self.player_pos = (nr, nc)
@@ -273,7 +302,8 @@ class GameState:
 
         # Если в ячейке наносится урон
         if damage > 0 and state_live == True:
-            self.lives -= 1
+            self.apply_damage(1)
+            # self.lives -= 1
             state_live = False
         # Проверка смерти
         if self.lives <= 0:
@@ -363,5 +393,21 @@ class GameState:
 
     def get_grid_value(self, nr, nc) -> int:
         return self.grid[nr][nc]
+    
+    def activate_freeze(self):
+        """Активирует заморозку на текущей позиции."""
+        if self.freeze_cell > 0:
+            self.freeze_cell -= 1
+            self.freeze_active = True
+            self.freeze_pos = self.player_pos
+            return True
+        return False
 
+    def apply_damage(self, amount=1):
+        """Наносит урон с учётом защиты."""
+        self.defense = max(0, self.defense - amount)
+        if (self.defense < 0):
+            self.lives += self.defense
+            self.defense = 0
+        return 
 ####### ФУНКЦИИ #######

@@ -55,7 +55,9 @@ def handle_register(request):
         users_db[username] = {"password": password,
             "stats": {
                 "lives": 2,
+                "defense": 1,
                 "max_skips": 2,
+                "freeze_cell": 0,
                 "random_wins": 0,
                 "last_completed_level": 0,
                 "deaths": 0,
@@ -217,8 +219,11 @@ def handle_client(conn, addr):
                     stats["fog_radius"] = 1
                 if "fog_remember" not in stats:
                     stats["fog_remember"] = False
+                if "defense" not in stats:
+                    stats["defense"] = 1
+                if "freeze_cell" not in stats:
+                    stats["freeze_cell"] = 0
                     
-
             # Обработка действия
             handler = ACTION_HANDLERS.get(action)
             if handler:

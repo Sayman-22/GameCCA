@@ -49,13 +49,17 @@ class GameWindow(QMainWindow):
 
         # HUD: Жизни, кристаллы, крафт (без m_infoLabel)
         self.m_lifeLabel = QLabel("❤️ Жизни: 2")
+        self.m_defenseLabel = QLabel("🛡️ Защита: 1")
         self.m_skipLabel = QLabel("⏭️ Пропуски: 2")
+        self.m_freezeLabel = QLabel(f"❄️ Заморозка: 0")
         self.m_pressureLabel = QLabel("⏲️ Давление: 200")
         self.m_crystalLabel = QLabel("💎 Кристаллы: 0")
         self.m_craftLabel = QLabel("🛠️ Крафт: 0")
 
         right_layout.addWidget(self.m_lifeLabel)
+        right_layout.addWidget(self.m_defenseLabel)
         right_layout.addWidget(self.m_skipLabel)
+        right_layout.addWidget(self.m_freezeLabel)
         right_layout.addWidget(self.m_pressureLabel)
         right_layout.addWidget(self.m_crystalLabel)
         right_layout.addWidget(self.m_craftLabel)
@@ -115,9 +119,13 @@ class GameWindow(QMainWindow):
         move_layout.addLayout(grid_move)
         right_layout.addWidget(move_group)
         
-        # Основные действия
+        # Следующий шаг
         self.m_btnNext = QPushButton("Следующий шаг")
         right_layout.addWidget(self.m_btnNext)
+
+        # Заморозить
+        self.btn_freeze = QPushButton("❄️ Заморозить")
+        right_layout.addWidget(self.btn_freeze)
 
         # Помощь
         self.btn_hint = QPushButton("🤔 Помощь")
@@ -129,6 +137,7 @@ class GameWindow(QMainWindow):
         self.m_btnLeft.clicked.connect(lambda: self.onMove(0, -1))
         self.m_btnRight.clicked.connect(lambda: self.onMove(0, 1))
         self.m_btnNext.clicked.connect(self.onNextStep)
+        self.btn_freeze.clicked.connect(self.onFreeze)
         self.btn_hint.clicked.connect(self.on_hint_clicked)
 
         top_layout.addWidget(right_panel, 1)
@@ -153,7 +162,9 @@ class GameWindow(QMainWindow):
     def update_hud(self):
         """Обновляет все элементы HUD."""
         self.m_lifeLabel.setText(f"❤️ Жизни: {self.m_gameState.lives}")
-        self.m_skipLabel.setText(f"⏭️ Пропуски: {self.m_gameState.skips_remaining}")
+        self.m_defenseLabel.setText(f"🛡️ Защита: {self.m_gameState.defense}")
+        self.m_skipLabel.setText(f"⏭️ Пропуски: {self.m_gameState.max_skips}")
+        self.m_freezeLabel.setText(f"❄️ Заморозка: {self.m_gameState.freeze_cell}")
         self.m_pressureLabel.setText(f"⏲️ Давление: {self.m_gameState.pressure_tolerance}")
         self.m_crystalLabel.setText(f"💎 Кристаллы: {self.m_gameState.crystals}")
         self.m_craftLabel.setText(f"🛠️ Крафт: {self.m_gameState.craftedCells}")
@@ -225,6 +236,19 @@ class GameWindow(QMainWindow):
             self.m_infoLabel.setText("Повезло, играем дальше! 🔄 Поле обновлено")
         elif (state == -1):
             self.m_infoLabel.setText("Смерть!")
+        
+    def on_hint_clicked(self):
+        if self.m_gameState:
+            hint = get_hint(self.m_gameState)
+            QMessageBox.information(self, "Совет помощника", hint)
+
+    def onFreeze(self):
+        if self.m_gameState.activate_freeze():
+            self.update_hud()
+            self.m_infoLabel.setText("Ячейка заморожена на один ход!")
+            self.moveStep(0, 0)
+        else:
+            self.m_infoLabel.setText("Нет зарядов заморозки!")
             
 ####### СОСТОЯНИЯ #######
 
@@ -240,20 +264,21 @@ class GameWindow(QMainWindow):
             self.m_infoLabel.setText("❌ Игра не запущена.")
             return
 
-        if self.m_gameState.skips_remaining <= 0:
+        if self.m_gameState.max_skips <= 0:
             self.m_infoLabel.setText("⚠️ Пропуски хода закончились!")
             self.m_btnNext.setEnabled(False)
             return
 
-        self.m_gameState.skips_remaining -= 1
+        self.m_gameState.max_skips -= 1
         self.moveStep(0, 0)
 
     def moveStep(self, dy, dx):
         r, c = self.m_gameState.player_pos
         nr, nc = r + dy, c + dx
-        cell = self.m_gameState.get_grid_value(nr, nc)
-        # пустота
-        if cell == self.m_gameState.EMPTY:
+        
+        # Проверка валидности хода
+        state_check = self.m_gameState.check_step(nr, nc)
+        if not state_check:
             return
         
         # Выполняем шаг
@@ -318,10 +343,12 @@ class GameWindow(QMainWindow):
             if not self.m_gameState.options.hardcore:
                 self.m_gameState.lives = stats.get("lives", 2)
 
-            self.m_gameState.skips_remaining = stats.get("max_skips", 2)
+            self.m_gameState.max_skips = stats.get("max_skips", 2)
             self.m_gameState.pressure_tolerance = stats.get("pressure_tolerance", 200)
-            self.m_gameState.visibility_radius = stats.get("fog_radius", 1)
-            self.m_gameState.remember_visibility = stats.get("fog_remember", False)
+            self.m_gameState.options.visibility_radius = stats.get("fog_radius", 1)
+            self.m_gameState.options.remember_visibility = stats.get("fog_remember", False)
+            self.m_gameState.defense = stats.get("defense", 1)
+            self.m_gameState.freeze_cell = stats.get("freeze_cell", 0)
 
         self.m_glWidget.game_state = self.m_gameState
         self.m_gameState.update_visibility()
@@ -333,10 +360,5 @@ class GameWindow(QMainWindow):
         if self.parent is not None:
             self.parent.show_main_menu()
         self.close()
-        
-    def on_hint_clicked(self):
-        if self.m_gameState:
-            hint = get_hint(self.m_gameState)
-            QMessageBox.information(self, "Совет помощника", hint)
 
 ####### СОБЫТИЯ #######
