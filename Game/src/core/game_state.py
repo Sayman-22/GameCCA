@@ -43,6 +43,7 @@ class GameOptions:
                  lives=2,
                  defense=1,
                  freeze_cell=0,
+                 max_undo=0,
                  rows=5,
                  cols=5,
                  randomize_at_4=False,
@@ -57,6 +58,7 @@ class GameOptions:
         self.randomize_at_4 = randomize_at_4
         self.four_steals_neighbors = four_steals_neighbors
         self.max_skips = max_skips
+        self.max_undo = max_undo
 
 class GameState:
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
@@ -74,10 +76,12 @@ class GameState:
         self.cols = cols
         self.username = username
         self.options = options
+        self.state_history = []  # список: [(grid_copy, player_pos), ...]
         self.crystals = 0
         self.craftedCells = 0
         self.defense = self.options.defense
         self.max_skips = self.options.max_skips
+        self.max_undo = self.options.max_undo
         self.pressure_tolerance = self.options.pressure_tolerance
         self.freeze_cell = self.options.freeze_cell # доступные заряды
         self.freeze_active = False   # активна ли заморозка в этом ходу
@@ -216,7 +220,7 @@ class GameState:
             new_frozen[s][e] = 1
             self.freeze_active = False
             self.freeze_pos = None
-            
+
         # Обновление ячеек
         self.update_all_cell(new_grid, new_frozen)
         # Обновление заморозки
@@ -262,12 +266,33 @@ class GameState:
         
         return True
 
+    def undo_move(self):
+        """Возвращает героя на предыдущую позицию."""
+        if self.state_history:
+            grid_prev, pos_prev = self.state_history.pop()
+            for r in range(self.rows):
+                for c in range(self.cols):
+                    self.grid[r][c] = grid_prev[r][c]
+            self.player_pos = pos_prev
+            self.max_undo -= 1
+            return True
+        return False
+
+    def write_history(self):
+        if self.max_undo > 0:
+            grid_copy = [row[:] for row in self.grid]  # глубокая копия
+            state = (grid_copy, self.player_pos)
+            self.state_history.append(state)
+            # Ограничиваем длину
+            if len(self.state_history) > self.max_undo:
+                self.state_history.pop(0)
+
 
     def move_player(self, dr: int, dc: int) -> int:
         r, c = self.player_pos
         nr, nc = r + dr, c + dc
-        
-        state_live = True
+
+        state_live = True # Отслеживает изменение жизни
         self.player_pos = (nr, nc)
         cell = self.grid[nr][nc]
         damage = self.damage[nr][nc]

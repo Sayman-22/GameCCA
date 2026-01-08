@@ -33,14 +33,17 @@ class StatisticsWindow(QMainWindow):
         defense = self.stats.get("defense", 1)
         skips = self.stats.get("max_skips", 2)
         freeze = self.stats.get("freeze", 0)
+        max_undo = self.stats.get("max_undo", 0)
         pressure = self.stats.get("pressure_tolerance", 200)
         deaths = self.stats.get("deaths", 0)
         fog_radius = self.stats.get("fog_radius", 1)
         fog_remember = "Да" if self.stats.get("fog_remember", False) else "Нет"
+        
         layout.addWidget(QLabel(f"❤️ Текущее количество жизней: {lives}"))
         layout.addWidget(QLabel(f"🛡️ Защита: {defense}"))
         layout.addWidget(QLabel(f"⏭️ Допустимых пропусков хода: {skips}"))
         layout.addWidget(QLabel(f"❄️ Заряды заморозки: {freeze}"))
+        layout.addWidget(QLabel(f"↩️ Макс. откатов: {max_undo}"))
         layout.addWidget(QLabel(f"⏲️ Допустимое давление: {pressure}"))
         layout.addWidget(QLabel(f"💀 Всего смертей: {deaths}"))
         layout.addWidget(QLabel(f"👁️ Радиус видимости: {fog_radius}"))

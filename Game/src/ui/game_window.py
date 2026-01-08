@@ -52,6 +52,7 @@ class GameWindow(QMainWindow):
         self.m_defenseLabel = QLabel("🛡️ Защита: 1")
         self.m_skipLabel = QLabel("⏭️ Пропуски: 2")
         self.m_freezeLabel = QLabel(f"❄️ Заморозка: 0")
+        self.m_undoLabel = QLabel(f"↩️ Откаты: 0")
         self.m_pressureLabel = QLabel("⏲️ Давление: 200")
         self.m_crystalLabel = QLabel("💎 Кристаллы: 0")
         self.m_craftLabel = QLabel("🛠️ Крафт: 0")
@@ -60,6 +61,7 @@ class GameWindow(QMainWindow):
         right_layout.addWidget(self.m_defenseLabel)
         right_layout.addWidget(self.m_skipLabel)
         right_layout.addWidget(self.m_freezeLabel)
+        right_layout.addWidget(self.m_undoLabel)
         right_layout.addWidget(self.m_pressureLabel)
         right_layout.addWidget(self.m_crystalLabel)
         right_layout.addWidget(self.m_craftLabel)
@@ -127,6 +129,10 @@ class GameWindow(QMainWindow):
         self.btn_freeze = QPushButton("❄️ Заморозить")
         right_layout.addWidget(self.btn_freeze)
 
+        # Назад
+        self.btn_undo = QPushButton("↩️ Назад")
+        right_layout.addWidget(self.btn_undo)
+
         # Помощь
         self.btn_hint = QPushButton("🤔 Помощь")
         right_layout.addWidget(self.btn_hint)
@@ -138,6 +144,7 @@ class GameWindow(QMainWindow):
         self.m_btnRight.clicked.connect(lambda: self.onMove(0, 1))
         self.m_btnNext.clicked.connect(self.onNextStep)
         self.btn_freeze.clicked.connect(self.onFreeze)
+        self.btn_undo.clicked.connect(self.onUndo)
         self.btn_hint.clicked.connect(self.on_hint_clicked)
 
         top_layout.addWidget(right_panel, 1)
@@ -165,6 +172,8 @@ class GameWindow(QMainWindow):
         self.m_defenseLabel.setText(f"🛡️ Защита: {self.m_gameState.defense}")
         self.m_skipLabel.setText(f"⏭️ Пропуски: {self.m_gameState.max_skips}")
         self.m_freezeLabel.setText(f"❄️ Заморозка: {self.m_gameState.freeze_cell}")
+        available = min(len(self.m_gameState.state_history), self.m_gameState.max_undo)
+        self.m_undoLabel.setText(f"↩️ Откаты: {available}/{self.m_gameState.max_undo}")
         self.m_pressureLabel.setText(f"⏲️ Давление: {self.m_gameState.pressure_tolerance}")
         self.m_crystalLabel.setText(f"💎 Кристаллы: {self.m_gameState.crystals}")
         self.m_craftLabel.setText(f"🛠️ Крафт: {self.m_gameState.craftedCells}")
@@ -191,6 +200,7 @@ class GameWindow(QMainWindow):
             QMessageBox.information(self, "Победа!", "Вы достигли финиша!\nСтатистика обновлена!")
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось обновить статистику на сервере.")
+        self.m_gameState.state_history.clear()
 
     def handle_defeat(self):
         """Обработка проигрыша."""
@@ -204,6 +214,7 @@ class GameWindow(QMainWindow):
                 msg = "Вы проиграли!\n(Не удалось обновить статистику)"
         else:
             msg = "Вы проиграли!"
+        self.m_gameState.state_history.clear()
 
         QMessageBox.information(self, "Проигрыш", msg)
         self.return_to_main_menu()
@@ -220,6 +231,7 @@ class GameWindow(QMainWindow):
                 msg = "Вы поглощены чёрной дырой!"
         else:
             msg = "Вы поглощены чёрной дырой!"
+        self.m_gameState.state_history.clear()
         
         QMessageBox.information(self, "Чёрная дыра", msg)
         self.return_to_main_menu()
@@ -227,6 +239,7 @@ class GameWindow(QMainWindow):
     def handle_arena_defeat(self):
         score = self.m_gameState.rows_removed
         QMessageBox.information(self, "Арена завершена", f"Пройдено строк: {score}")
+        self.m_gameState.state_history.clear()
         self.return_to_main_menu()
 
     def handle_message(self, state):
@@ -244,11 +257,19 @@ class GameWindow(QMainWindow):
 
     def onFreeze(self):
         if self.m_gameState.activate_freeze():
+            self.moveStep(0, 0)
             self.update_hud()
             self.m_infoLabel.setText("Ячейка заморожена на один ход!")
-            self.moveStep(0, 0)
         else:
             self.m_infoLabel.setText("Нет зарядов заморозки!")
+
+    def onUndo(self):
+        if self.m_gameState.undo_move():
+            self.m_glWidget.update_view()
+            self.update_hud()
+            self.m_infoLabel.setText("Ход отменён.")
+        else:
+            self.m_infoLabel.setText("Нет ходов для отмены.")
             
 ####### СОСТОЯНИЯ #######
 
@@ -281,6 +302,8 @@ class GameWindow(QMainWindow):
         if not state_check:
             return
         
+        # Записываем историю
+        self.m_gameState.write_history()
         # Выполняем шаг
         self.m_gameState.advance_step()
         # Производим ход в логике игры
@@ -344,12 +367,14 @@ class GameWindow(QMainWindow):
                 self.m_gameState.lives = stats.get("lives", 2)
 
             self.m_gameState.max_skips = stats.get("max_skips", 2)
+            self.m_gameState.max_undo = stats.get("max_undo", 0)
             self.m_gameState.pressure_tolerance = stats.get("pressure_tolerance", 200)
             self.m_gameState.options.visibility_radius = stats.get("fog_radius", 1)
             self.m_gameState.options.remember_visibility = stats.get("fog_remember", False)
             self.m_gameState.defense = stats.get("defense", 1)
             self.m_gameState.freeze_cell = stats.get("freeze_cell", 0)
 
+        self.m_gameState.state_history.clear()
         self.m_glWidget.game_state = self.m_gameState
         self.m_gameState.update_visibility()
         self.m_glWidget.update_view()

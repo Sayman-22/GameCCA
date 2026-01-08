@@ -58,6 +58,7 @@ def handle_register(request):
                 "defense": 1,
                 "max_skips": 2,
                 "freeze_cell": 0,
+                "max_undo": 0,
                 "random_wins": 0,
                 "last_completed_level": 0,
                 "deaths": 0,
@@ -223,6 +224,8 @@ def handle_client(conn, addr):
                     stats["defense"] = 1
                 if "freeze_cell" not in stats:
                     stats["freeze_cell"] = 0
+                if "max_undo" not in stats:
+                    stats["max_undo"] = 0
                     
             # Обработка действия
             handler = ACTION_HANDLERS.get(action)
