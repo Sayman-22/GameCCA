@@ -2,14 +2,14 @@
   "User": {
     "password": "123",
     "stats": {
-      "random_wins": 15,
+      "random_wins": 18,
       "last_completed_level": 1,
       "deaths": 27,
       "deaths_from_black_hole": 4,
       "lives": 2,
       "max_skips": 2,
       "craft_cells": 0,
-      "crystals": 22,
+      "crystals": 24,
       "pressure_tolerance": 200,
       "fog_radius": 1,
       "fog_remember": false,

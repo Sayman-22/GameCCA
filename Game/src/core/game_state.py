@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import QMessageBox
 
 @dataclass
 class GameOptions:
+    border_void = False
+
     # Размер поля
     rows: int = 4
     cols: int = 4
@@ -86,6 +88,7 @@ class GameState:
         self.freeze_cell = self.options.freeze_cell # доступные заряды
         self.freeze_active = False   # активна ли заморозка в этом ходу
         self.freeze_pos = None       # позиция замороженной ячейки
+        self.border_void = self.options.border_void
             
         # Режим
         if self.options.mode == "arena":
@@ -118,35 +121,82 @@ class GameState:
 
 
 ####### ФУНКЦИИ #######
+    def add_border_void(self):
+        """Добавляет пустоту по краю и размещает старт/финиш."""
+        rows, cols = self.rows, self.cols
+        grid = self.grid
+
+        # 1. Заполняем весь периметр EMPTY
+        for r in range(rows):
+            for c in range(cols):
+                if r == 0 or r == rows - 1 or c == 0 or c == cols - 1:
+                    grid[r][c] = GameState.EMPTY
+
+        # 2. Выбираем стартовую сторону
+        sides = ["top", "bottom", "left", "right"]
+        start_side = random.choice(sides)
+
+        # 3. Определяем противоположную сторону
+        opposite = {
+            "top": "bottom",
+            "bottom": "top",
+            "left": "right",
+            "right": "left"
+        }
+        end_side = opposite[start_side]
+
+        # 4. Генерируем позиции (не в углах!)
+        def get_random_pos(side):
+            if side == "top":
+                r = 0
+                c = random.randint(1, cols - 2)  # не в углах
+            elif side == "bottom":
+                r = rows - 1
+                c = random.randint(1, cols - 2)
+            elif side == "left":
+                r = random.randint(1, rows - 2)
+                c = 0
+            else:  # right
+                r = random.randint(1, rows - 2)
+                c = cols - 1
+            return (r, c)
+
+        start_pos = get_random_pos(start_side)
+        end_pos = get_random_pos(end_side)
+
+        # 5. Устанавливаем старт и финиш
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        grid[start_pos[0]][start_pos[1]] = GameState.START_FIN_CELL
+        grid[end_pos[0]][end_pos[1]] = GameState.START_FIN_CELL
+        self.grid = grid
+
+        # 6. Обновляем позицию игрока
+        self.player_pos = start_pos
+
     def generate_initial_grid(self):
+        # Бордеры и старт финиш
+        if self.options.border_void:
+            self.add_border_void()
+
+        # Генерация пустоты
+        self.generation_empty()
+
         # Заполняем случайными числами
         for r in range(self.rows):
             for c in range(self.cols):
+                if self.grid[r][c] == GameState.EMPTY or self.grid[r][c] == GameState.START_FIN_CELL:
+                    continue
                 self.grid[r][c] = random.randint(
                     self.options.min_initial_value,
                     self.options.max_initial_value
                 )
 
-        # Старт и финиш
-        self.grid[self.start_pos[0]][self.start_pos[1]] = self.START_FIN_CELL
-        if not self.options.mode == "arena":
-            self.grid[self.end_pos[0]][self.end_pos[1]] = self.START_FIN_CELL
+        # # Старт и финиш
+        # self.grid[self.start_pos[0]][self.start_pos[1]] = self.START_FIN_CELL
+        # if not self.options.mode == "arena":
+        #     self.grid[self.end_pos[0]][self.end_pos[1]] = self.START_FIN_CELL
 
-        # --- Генерация пустоты ---
-        if self.options.generate_empty:
-            # Получаем список всех ячеек, кроме старта и финиша
-            all_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)]
-            # Удаляем старт и финиш
-            start_pos = self.start_pos
-            end_pos = self.end_pos
-            valid_cells = [pos for pos in all_cells if pos != start_pos and pos != end_pos]
-
-            # Выбираем 3 случайные ячейки
-            void_positions = random.sample(valid_cells, min(self.options.generate_empty_count, len(valid_cells)))
-
-            for r, c in void_positions:
-                if random.random() < 0.5:  # 50% шанс
-                    self.grid[r][c] = GameState.EMPTY
 
         # Кристалл (75%)
         if random.random() < 0.75:
@@ -163,6 +213,22 @@ class GameState:
             if free_cells:
                 r, c = random.choice(free_cells)
                 self.grid[r][c] = self.CRAFT
+
+    def generation_empty(self):
+        if self.options.generate_empty:
+            # Получаем список всех ячеек, кроме старта и финиша
+            all_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)]
+            # Удаляем старт и финиш
+            start_pos = self.start_pos
+            end_pos = self.end_pos
+            valid_cells = [pos for pos in all_cells if pos != start_pos and pos != end_pos]
+
+            # Выбираем 3 случайные ячейки
+            void_positions = random.sample(valid_cells, min(self.options.generate_empty_count, len(valid_cells)))
+
+            for r, c in void_positions:
+                if random.random() < 0.5:  # 50% шанс
+                    self.grid[r][c] = GameState.EMPTY
 
     def generate_arena_grid(self):
         self.grid = [
