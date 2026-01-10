@@ -2,6 +2,7 @@
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QLabel, QPushButton, QMessageBox
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QGroupBox, QGridLayout
+from PyQt5.QtWidgets import QLineEdit, QStackedWidget
 from PyQt5.QtCore import Qt
 from ui.game_view import GameView
 from ui.style import COSMIC_STYLE
@@ -24,54 +25,81 @@ class GameWindow(QMainWindow):
 
     def setupUi(self):
         self.setWindowTitle("Лабиринт — Игра")
-        self.resize(1300, 800)  # немного выше, чтобы уместить всё
+        self.resize(1300, 800)
 
         # Главный вертикальный макет
+        bottom_layout = QHBoxLayout()
         main_layout = QVBoxLayout()
         central_widget = QWidget()
         central_widget.setStyleSheet("background-color: #0F1426;")
-        central_widget.setLayout(main_layout)
+        central_widget.setLayout(bottom_layout)
         self.setCentralWidget(central_widget)
 
-        # === Верхняя часть: Игровое поле + Правая панель ===
-        top_layout = QHBoxLayout()
+        # Верхняя часть: Кнопка + Стек с полем
+        top_bar_layout = QHBoxLayout()
+        
+        # Кнопка переключения режима (в левом верхнем углу)
+        self.btn_toggle_mask = QPushButton("❓ Маски")
+        self.btn_toggle_mask.clicked.connect(self.toggle_mask_mode)
+        top_bar_layout.addWidget(self.btn_toggle_mask)
+        top_bar_layout.addStretch()  # кнопка прижата к левому краю
+        
+        main_layout.addLayout(top_bar_layout)
 
-        # --- Игровое поле (слева) ---
+        # --- Стек для переключения между полями ---
+        self.stack = QStackedWidget()
+
+        # Основное поле (GameView)
         self.m_glWidget = GameView(None)
-        top_layout.addWidget(self.m_glWidget, 3)
+        self.stack.addWidget(self.m_glWidget)  # index 0
 
-        # --- Правая панель управления (справа) ---
+        # Поле ввода для масок
+        self.mask_input_widget = QWidget()
+        self.mask_layout = QGridLayout(self.mask_input_widget)
+        self.mask_layout.setSpacing(0)
+        self.stack.addWidget(self.mask_input_widget)  # index 1
+
+        main_layout.addWidget(self.stack)
+
+        # --- Правая панель управления ---
         right_panel = QWidget()
-        right_panel.setFixedWidth(200)
+        right_panel.setFixedWidth(250)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(10, 10, 10, 10)
         right_layout.setSpacing(10)
 
-        # HUD: Жизни, кристаллы, крафт (без m_infoLabel)
+        # HUD в две колонки
+        hud_grid = QGridLayout()
+        hud_grid.setSpacing(5)
+
+        # Левая колонка
         self.m_lifeLabel = QLabel("❤️ Жизни: 2")
         self.m_defenseLabel = QLabel("🛡️ Защита: 1")
         self.m_skipLabel = QLabel("⏭️ Пропуски: 2")
         self.m_freezeLabel = QLabel(f"❄️ Заморозка: 0")
-        self.m_undoLabel = QLabel(f"↩️ Откаты: 0")
-        self.m_pressureLabel = QLabel("⏲️ Давление: 200")
+
+        # Правая колонка
         self.m_crystalLabel = QLabel("💎 Кристаллы: 0")
         self.m_craftLabel = QLabel("🛠️ Крафт: 0")
+        self.m_undoLabel = QLabel(f"↩️ Откаты: 0")
+        self.m_pressureLabel = QLabel("⏲️ Давление: 200")
 
-        right_layout.addWidget(self.m_lifeLabel)
-        right_layout.addWidget(self.m_defenseLabel)
-        right_layout.addWidget(self.m_skipLabel)
-        right_layout.addWidget(self.m_freezeLabel)
-        right_layout.addWidget(self.m_undoLabel)
-        right_layout.addWidget(self.m_pressureLabel)
-        right_layout.addWidget(self.m_crystalLabel)
-        right_layout.addWidget(self.m_craftLabel)
+        # Добавляем в сетку
+        hud_grid.addWidget(self.m_lifeLabel, 0, 0)
+        hud_grid.addWidget(self.m_crystalLabel, 0, 1)
+        hud_grid.addWidget(self.m_defenseLabel, 1, 0)
+        hud_grid.addWidget(self.m_craftLabel, 1, 1)
+        hud_grid.addWidget(self.m_skipLabel, 2, 0)
+        hud_grid.addWidget(self.m_undoLabel, 2, 1)
+        hud_grid.addWidget(self.m_freezeLabel, 3, 0)
+        hud_grid.addWidget(self.m_pressureLabel, 3, 1)
+
+        right_layout.addLayout(hud_grid)
         right_layout.addStretch()
 
-        # === Легенда цветов ===
+        # Легенда
         legend_group = QGroupBox("Легенда")
         legend_layout = QVBoxLayout(legend_group)
-
-        # Создаём строки легенды
         legend_items = [
             ("#1A2332", "🌍 Чётное число"),
             ("#8B2E3C", "💥 Нечётное число"),
@@ -82,28 +110,20 @@ class GameWindow(QMainWindow):
             ("#B5651D", "🛠️ Крафт"),
             ("#000000", "⬛ Пустота")
         ]
-
         for color_hex, text in legend_items:
             row_widget = QWidget()
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(0, 0, 0, 0)
             row_layout.setSpacing(5)
-
-            # Квадратик цвета
             color_square = QLabel()
             color_square.setFixedSize(16, 16)
             color_square.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #888;")
-
-            # Текст
             label_text = QLabel(text)
             label_text.setStyleSheet("padding-left: 5px; color: #C0D0FF;")
-
             row_layout.addWidget(color_square)
             row_layout.addWidget(label_text)
             row_layout.addStretch()
-
             legend_layout.addWidget(row_widget)
-
         right_layout.addWidget(legend_group)
 
         # Управление
@@ -120,24 +140,22 @@ class GameWindow(QMainWindow):
         grid_move.addWidget(self.m_btnRight, 1, 2)
         move_layout.addLayout(grid_move)
         right_layout.addWidget(move_group)
-        
-        # Следующий шаг
-        self.m_btnNext = QPushButton("Следующий шаг")
-        right_layout.addWidget(self.m_btnNext)
 
-        # Заморозить
-        self.btn_freeze = QPushButton("❄️ Заморозить")
-        right_layout.addWidget(self.btn_freeze)
+        # Кнопки действий
+        actions_layout = QHBoxLayout()
+        actions_layout.setSpacing(5)
 
-        # Назад
-        self.btn_undo = QPushButton("↩️ Назад")
-        right_layout.addWidget(self.btn_undo)
+        self.m_btnNext = QPushButton("⏭️")
+        self.btn_freeze = QPushButton("❄️")
+        self.btn_undo = QPushButton("↩️")
+        self.btn_hint = QPushButton("🤔")
 
-        # Помощь
-        self.btn_hint = QPushButton("🤔 Помощь")
-        right_layout.addWidget(self.btn_hint)
+        grid_move.addWidget(self.m_btnNext, 2, 1) 
+        grid_move.addWidget(self.btn_freeze, 2, 0)
+        grid_move.addWidget(self.btn_undo, 2, 2)
+        grid_move.addWidget(self.btn_hint, 3, 1)
 
-        # ---- Сигналы ----
+        # Подключение сигналов
         self.m_btnUp.clicked.connect(lambda: self.onMove(-1, 0))
         self.m_btnDown.clicked.connect(lambda: self.onMove(1, 0))
         self.m_btnLeft.clicked.connect(lambda: self.onMove(0, -1))
@@ -147,19 +165,18 @@ class GameWindow(QMainWindow):
         self.btn_undo.clicked.connect(self.onUndo)
         self.btn_hint.clicked.connect(self.on_hint_clicked)
 
-        top_layout.addWidget(right_panel, 1)
-        main_layout.addLayout(top_layout)
+        bottom_layout.addLayout(main_layout)
+        bottom_layout.addWidget(right_panel, 1)
+        # main_layout.addLayout(bottom_layout)
 
-        # === Нижняя панель: Информационная строка (во всю ширину) ===
+        # Информационная строка (самая нижняя)
         info_bar = QWidget()
         info_bar.setObjectName("infoBar")
         info_layout = QHBoxLayout(info_bar)
-        info_layout.setContentsMargins(0, 0, 0, 0)
-
         self.m_infoLabel = QLabel("Готов к ходу")
         self.m_infoLabel.setAlignment(Qt.AlignCenter)
         info_layout.addWidget(self.m_infoLabel)
-        main_layout.addWidget(info_bar)  # Добавляем в основной макет
+        main_layout.addWidget(info_bar)
         
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
 
@@ -271,6 +288,58 @@ class GameWindow(QMainWindow):
         else:
             self.m_infoLabel.setText("Нет ходов для отмены.")
             
+    def toggle_mask_mode(self):
+        if self.stack.currentIndex() == 0:
+            self.create_mask_input_grid()
+            self.stack.setCurrentIndex(1)
+            self.btn_toggle_mask.setText("← Назад к лабиринту")
+        else:
+            self.stack.setCurrentIndex(0)
+            self.btn_toggle_mask.setText("❓ Маски")
+
+    def create_mask_input_grid(self):
+        # Очищаем предыдущее содержимое
+        for i in reversed(range(self.mask_layout.count())):
+            widget = self.mask_layout.takeAt(i).widget()
+            if widget:
+                widget.deleteLater()
+
+        rows, cols = self.m_gameState.rows, self.m_gameState.cols
+
+        for r in range(rows):
+            for c in range(cols):
+                if self.m_gameState.use_masks and self.m_gameState.mask_grid[r][c]:
+                    line_edit = QLineEdit()
+                    line_edit.setFixedSize(40, 40)
+                    line_edit.setAlignment(Qt.AlignCenter)
+                    line_edit.returnPressed.connect(
+                        lambda le=line_edit, rr=r, cc=c: self.on_mask_guess(le, rr, cc)
+                    )
+                    self.mask_layout.addWidget(line_edit, r, c)
+                else:
+                    placeholder = QLabel("?")
+                    placeholder.setAlignment(Qt.AlignCenter)
+                    placeholder.setStyleSheet("background-color: #2A2A2A; color: #888;")
+                    self.mask_layout.addWidget(placeholder, r, c)
+
+    def on_mask_guess(self, line_edit, r, c):
+        try:
+            guess = int(line_edit.text())
+        except ValueError:
+            return
+
+        result = self.m_gameState.check_mask_guess(r, c, guess)
+        if result == "correct":
+            line_edit.setStyleSheet("background-color: #2E7D32; color: white;")  # зелёный
+            self.update_hud()
+            QMessageBox.information(self, "Успех!", "Вы угадали число!\n+3 кристалла!")
+            self.create_mask_input_grid()  # обновить поле
+        elif result == "wrong":
+            line_edit.setStyleSheet("background-color: #C62828; color: white;")  # красный
+            self.m_infoLabel.setText(f"Ошибка! Осталось попыток: {3 - self.m_gameState.mask_attempts}")
+        elif result == "game_over":
+            self.handle_defeat()
+
 ####### СОСТОЯНИЯ #######
 
 

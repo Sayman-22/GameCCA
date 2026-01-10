@@ -61,6 +61,11 @@ class GameOptions:
         self.four_steals_neighbors = four_steals_neighbors
         self.max_skips = max_skips
         self.max_undo = max_undo
+        # ячейки - маски
+        self.mask_grid = None          # [[bool]] — True = закрыта
+        self.original_values = None    # [[int]] — исходные числа
+        self.mask_attempts = 0         # ошибки (макс. 3)
+        self.use_masks = False         # флаг активности режима
 
 class GameState:
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
@@ -89,6 +94,7 @@ class GameState:
         self.freeze_active = False   # активна ли заморозка в этом ходу
         self.freeze_pos = None       # позиция замороженной ячейки
         self.border_void = self.options.border_void
+        self.use_masks = self.options.use_masks
             
         # Режим
         if self.options.mode == "arena":
@@ -121,6 +127,65 @@ class GameState:
 
 
 ####### ФУНКЦИИ #######
+    def generate_initial_grid(self):
+        # Бордеры и старт финиш
+        if self.options.border_void:
+            self.add_border_void()
+
+        # Генерация пустоты
+        self.generation_empty()
+        
+        # Ячейки с масками
+        if self.options.use_masks:
+            self.add_masks()
+
+        # Заполняем случайными числами
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if self.grid[r][c] == GameState.EMPTY or self.grid[r][c] == GameState.START_FIN_CELL:
+                    continue
+                if self.use_masks and self.mask_grid[r][c]:# Не обновляем числа под масками
+                    continue
+                self.grid[r][c] = random.randint(
+                    self.options.min_initial_value,
+                    self.options.max_initial_value
+                )
+
+        # Кристалл (75%)
+        if random.random() < 0.75:
+            free_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)
+                          if (r, c) not in [self.start_pos, self.end_pos] and self.grid[r][c] > 0]
+            if free_cells:
+                r, c = random.choice(free_cells)
+                self.grid[r][c] = self.CRYSTAL
+
+        # Крафт (75%)
+        if random.random() < 0.75:
+            free_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)
+                          if (r, c) not in [self.start_pos, self.end_pos] and self.grid[r][c] > 0]
+            if free_cells:
+                r, c = random.choice(free_cells)
+                self.grid[r][c] = self.CRAFT
+            
+    def add_masks(self):
+        """Добавляет маски на случайные ячейки."""
+        self.use_masks = True
+        self.mask_attempts = 0
+        rows, cols = self.rows, self.cols
+
+        # Инициализация
+        self.mask_grid = [[False] * cols for _ in range(rows)]
+        self.original_values = [[0] * cols for _ in range(rows)]
+
+        # Выбираем N ячеек для масок (например, 5)
+        all_cells = [(r, c) for r in range(rows) for c in range(cols)
+                    if (r, c) != self.start_pos and (r, c) != self.end_pos]
+        mask_cells = random.sample(all_cells, min(5, len(all_cells)))
+
+        for r, c in mask_cells:
+            self.mask_grid[r][c] = True
+            self.original_values[r][c] = self.grid[r][c]  # сохраняем исходное число
+
     def add_border_void(self):
         """Добавляет пустоту по краю и размещает старт/финиш."""
         rows, cols = self.rows, self.cols
@@ -173,46 +238,6 @@ class GameState:
 
         # 6. Обновляем позицию игрока
         self.player_pos = start_pos
-
-    def generate_initial_grid(self):
-        # Бордеры и старт финиш
-        if self.options.border_void:
-            self.add_border_void()
-
-        # Генерация пустоты
-        self.generation_empty()
-
-        # Заполняем случайными числами
-        for r in range(self.rows):
-            for c in range(self.cols):
-                if self.grid[r][c] == GameState.EMPTY or self.grid[r][c] == GameState.START_FIN_CELL:
-                    continue
-                self.grid[r][c] = random.randint(
-                    self.options.min_initial_value,
-                    self.options.max_initial_value
-                )
-
-        # # Старт и финиш
-        # self.grid[self.start_pos[0]][self.start_pos[1]] = self.START_FIN_CELL
-        # if not self.options.mode == "arena":
-        #     self.grid[self.end_pos[0]][self.end_pos[1]] = self.START_FIN_CELL
-
-
-        # Кристалл (75%)
-        if random.random() < 0.75:
-            free_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)
-                          if (r, c) not in [self.start_pos, self.end_pos] and self.grid[r][c] > 0]
-            if free_cells:
-                r, c = random.choice(free_cells)
-                self.grid[r][c] = self.CRYSTAL
-
-        # Крафт (75%)
-        if random.random() < 0.75:
-            free_cells = [(r, c) for r in range(self.rows) for c in range(self.cols)
-                          if (r, c) not in [self.start_pos, self.end_pos] and self.grid[r][c] > 0]
-            if free_cells:
-                r, c = random.choice(free_cells)
-                self.grid[r][c] = self.CRAFT
 
     def generation_empty(self):
         if self.options.generate_empty:
@@ -427,6 +452,8 @@ class GameState:
                     continue
                 if new_frozen[r][c]:  # замороженные ячейки не обновляются
                     continue
+                if self.use_masks and self.mask_grid[r][c]:# Не обновляем числа под масками
+                    continue
 
                 # Применяем базовое правило Коллатца
                 if val % 2 == 0:
@@ -500,5 +527,22 @@ class GameState:
         if (self.defense < 0):
             self.lives += self.defense
             self.defense = 0
-        return 
+        return
+    
+    def check_mask_guess(self, r, c, guess):
+        """Проверяет число под маской."""
+        if not self.mask_grid[r][c]:
+            return False  # уже открыта
+
+        original = self.original_values[r][c]
+        if guess == original:
+            self.mask_grid[r][c] = False  # открываем
+            self.crystals += 3
+            return "correct"
+        else:
+            self.mask_attempts += 1
+            if self.mask_attempts >= 3:
+                return "game_over"
+            return "wrong"
+    
 ####### ФУНКЦИИ #######

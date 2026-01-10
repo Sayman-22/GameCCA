@@ -47,7 +47,13 @@ class GameView(QGraphicsView):
         for r in range(self.game_state.rows):
             for c in range(self.game_state.cols):
                 if self.game_state.visibility[r][c]:
-                    self.update_all_cell(cell_size, r, c)
+                    if self.game_state.use_masks and self.game_state.mask_grid[r][c]:
+                        emoji = QGraphicsTextItem("?")
+                        emoji.setBrush(QColor("#4A4A4A"))  # серый туман
+                        emoji.setDefaultTextColor(Qt.white)
+                        self.scene.addItem(emoji)
+                    else:
+                        self.update_all_cell(cell_size, r, c)
                 else:
                     # Туман войны
                     fog = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
