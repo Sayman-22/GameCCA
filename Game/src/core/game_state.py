@@ -3,6 +3,7 @@ from typing import List
 import random
 from ui.network_client import send_request
 from PyQt5.QtWidgets import QMessageBox
+from core.update_cell import CellStyle
 
 @dataclass
 class GameOptions:
@@ -40,6 +41,12 @@ class GameOptions:
     visibility_radius = 1
     remember_visibility = False
 
+    # ячейки - маски
+    mask_grid = None          # [[bool]] — True = закрыта
+    original_values = None    # [[int]] — исходные числа
+    mask_attempts = 0         # ошибки (макс. 3)
+    use_masks = False         # флаг активности режима
+
     def __init__(self,
                  mode="maze",
                  lives=2,
@@ -61,24 +68,34 @@ class GameOptions:
         self.four_steals_neighbors = four_steals_neighbors
         self.max_skips = max_skips
         self.max_undo = max_undo
-        # ячейки - маски
-        self.mask_grid = None          # [[bool]] — True = закрыта
-        self.original_values = None    # [[int]] — исходные числа
-        self.mask_attempts = 0         # ошибки (макс. 3)
-        self.use_masks = False         # флаг активности режима
 
 class GameState:
 ####### ИНИЦИАЛИЗАЦИЯ КЛАССА ОБРАБОТЧИКА #######
+    # Игровые ячейки на лабиринте
     START_FIN_CELL = -1
     EMPTY = -2
     CRAFT = -3
     CRYSTAL = -4
+    CASTLE = -11
+    WALL = -12
+    # Основая страница
+    CAMPAIGN_CELL = -111
+    ARENA_CELL = -112
+    RANDOM_CELL = -113
+    STATISTICS_CELL = -114
+    SETTINGS_CELL = -115
+    END_CELL = -116
+    START_CELL = -117
+    BLACK_HOLE_CELL = -118
+    GOOD_SYSTEM_CELL = -119
+    BAD_SYSTEM_CELL = -120
 
     def __init__(self,
                  username,
                  rows, 
                  cols, 
                  options: GameOptions = GameOptions()):
+        self.cellStyle = CellStyle()
         self.rows = rows
         self.cols = cols
         self.username = username
@@ -95,6 +112,7 @@ class GameState:
         self.freeze_pos = None       # позиция замороженной ячейки
         self.border_void = self.options.border_void
         self.use_masks = self.options.use_masks
+        self.mask_attempts = 0
             
         # Режим
         if self.options.mode == "arena":
@@ -117,6 +135,7 @@ class GameState:
         self.grid: List[List[int]] = [[0] * self.cols for _ in range(self.rows)]
         self.frozen: List[List[int]] = [[0] * self.cols for _ in range(self.rows)]
         self.damage: List[List[int]] = [[0] * self.cols for _ in range(self.rows)]
+        self.planet: List[List[str]] = [[""] * self.cols for _ in range(self.rows)]
         if self.options.fog_of_war == False:
             self.visibility = [[True for _ in range(self.cols)] for _ in range(self.rows)]
         else:
@@ -127,6 +146,9 @@ class GameState:
 
 
 ####### ФУНКЦИИ #######
+    def getNamePlanet(self, r, c):
+        return self.planet[r][c]
+
     def generate_initial_grid(self):
         # Бордеры и старт финиш
         if self.options.border_void:
@@ -134,22 +156,21 @@ class GameState:
 
         # Генерация пустоты
         self.generation_empty()
-        
-        # Ячейки с масками
-        if self.options.use_masks:
-            self.add_masks()
 
         # Заполняем случайными числами
         for r in range(self.rows):
             for c in range(self.cols):
                 if self.grid[r][c] == GameState.EMPTY or self.grid[r][c] == GameState.START_FIN_CELL:
                     continue
-                if self.use_masks and self.mask_grid[r][c]:# Не обновляем числа под масками
-                    continue
                 self.grid[r][c] = random.randint(
                     self.options.min_initial_value,
                     self.options.max_initial_value
                 )
+                self.planet[r][c] = self.cellStyle.getNamePlanet()
+        
+        # Ячейки с масками
+        if self.options.use_masks:
+            self.add_masks()
 
         # Кристалл (75%)
         if random.random() < 0.75:
@@ -179,12 +200,14 @@ class GameState:
 
         # Выбираем N ячеек для масок (например, 5)
         all_cells = [(r, c) for r in range(rows) for c in range(cols)
-                    if (r, c) != self.start_pos and (r, c) != self.end_pos]
+                    if (r, c) != self.start_pos and\
+                       (r, c) != self.end_pos and\
+                       self.grid[r][c] > 0]
         mask_cells = random.sample(all_cells, min(5, len(all_cells)))
 
         for r, c in mask_cells:
             self.mask_grid[r][c] = True
-            self.original_values[r][c] = self.grid[r][c]  # сохраняем исходное число
+            self.original_values[r][c] = self.grid[r][c]
 
     def add_border_void(self):
         """Добавляет пустоту по краю и размещает старт/финиш."""
@@ -443,6 +466,7 @@ class GameState:
                             self.options.min_initial_value,
                             self.options.max_initial_value
                         )
+                        self.planet[y][x] = self.cellStyle.getNamePlanet()
                         
     def update_all_cell(self, new_grid, new_frozen):
         for r in range(self.rows):

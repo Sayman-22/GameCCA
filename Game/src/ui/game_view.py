@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QFont, QPainter
 from core.game_state import GameState
 from ui.style import COSMIC_STYLE
+from core.update_cell import CellStyle
 
 class GameView(QGraphicsView):
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
@@ -11,6 +12,7 @@ class GameView(QGraphicsView):
         self.game_state = game_state
         self.setStyleSheet(COSMIC_STYLE)
         self.scene = QGraphicsScene()
+        self.cellStyle = CellStyle()
         self.setScene(self.scene)
         self.setRenderHint(QPainter.Antialiasing)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -48,21 +50,15 @@ class GameView(QGraphicsView):
             for c in range(self.game_state.cols):
                 if self.game_state.visibility[r][c]:
                     if self.game_state.use_masks and self.game_state.mask_grid[r][c]:
-                        emoji = QGraphicsTextItem("?")
-                        emoji.setBrush(QColor("#4A4A4A"))  # серый туман
-                        emoji.setDefaultTextColor(Qt.white)
-                        self.scene.addItem(emoji)
+                        self.cellStyle.updateColorCell(self.scene, cell_size, c, r, "#4A4A4A")
+                        self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "?")
                     else:
                         self.update_all_cell(cell_size, r, c)
-                else:
-                    # Туман войны
-                    fog = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
-                    fog.setBrush(QColor("#305050"))  # чёрный туман
-                    self.scene.addItem(fog)
+                else:# Туман войны
+                    self.cellStyle.updateColorCell(self.scene, cell_size, c, r, "#305050")
 
-            
         # 2. Рисуем игрока
-        self.update_hero(cell_size)
+        self.cellStyle.updateObjectCell(self.scene, self.game_state.player_pos[0], self.game_state.player_pos[1], cell_size, "🛸")
         # 3. Текст с числом ячейки ПОД героем
         self.update_text_hero(cell_size)
         # 4. Отображаем "Старт"
@@ -73,7 +69,6 @@ class GameView(QGraphicsView):
             self.update_finish(cell_size)
 
         self.setSceneRect(0, 0, self.game_state.cols * cell_size, self.game_state.rows * cell_size)
-        # self.fitInView(self.sceneRect(), Qt.KeepAspectRatio)
 
 ####### СОБЫТИЯ #######
 
@@ -109,145 +104,46 @@ class GameView(QGraphicsView):
         if pr == r and pc == c:
             return
         
+        emoji = ""
         if value == GameState.CRYSTAL:
-            self.update_crystals_cell(cell_size, r, c)
+            self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "💎")
         elif value == GameState.CRAFT:
-            self.update_craft_cell(cell_size, r, c)
+            self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "⚒")
         elif value == GameState.START_FIN_CELL:
-            # Старт/Финиш — уже отрисовываются отдельно, можно пропустить
             pass
         elif value == GameState.EMPTY:
-            void_emoji = QGraphicsTextItem("⚫")
-            void_emoji.setFont(QFont("Arial", 14, QFont.Bold))
-            void_emoji.setDefaultTextColor(Qt.white)
-            void_emoji.setPos(
-                c * cell_size + cell_size / 2 - void_emoji.boundingRect().width() / 2,
-                r * cell_size + cell_size / 2 - void_emoji.boundingRect().height() / 2
-            )
-            self.scene.addItem(void_emoji)
+            self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "⚫")
         elif value > self.game_state.pressure_tolerance and (r, c) != self.game_state.player_pos:   # не рисуем, если там герой
-            self.update_pressure_tolerance(cell_size, value, r, c)
+            self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "⏲️")
+            # Число в правом верхнем углу
+            self.cellStyle.updateDigitalCell(self.scene, r, c, cell_size, str(value))
         elif value > 0 and (r, c) != self.game_state.player_pos:  # не рисуем, если там герой
-            self.update_point_cell(cell_size, value, r, c)
-
-    def update_pressure_tolerance(self, cell_size, value, r, c):
-        emoji_text = QGraphicsTextItem("⏲️")
-        emoji_text.setFont(QFont("Arial", 14, QFont.Bold))
-        emoji_text.setDefaultTextColor(Qt.white)
-        emoji_text.setPos(
-            c * cell_size + cell_size / 2 - emoji_text.boundingRect().width() / 2,
-            r * cell_size + cell_size / 2 - emoji_text.boundingRect().height() / 2
-        )
-        self.scene.addItem(emoji_text)
-
-        # Число в правом верхнем углу
-        num_item = QGraphicsTextItem(str(value))
-        num_item.setFont(QFont("Arial", 7, QFont.Bold))
-        num_item.setDefaultTextColor(Qt.white)
-        num_item.setPos(
-            c * cell_size + cell_size - num_item.boundingRect().width(),
-            r * cell_size + 0
-        )
-        self.scene.addItem(num_item)
-
-    def update_crystals_cell(self, cell_size, r, c):
-        emoji = QGraphicsTextItem("💎")
-        emoji.setFont(QFont("Arial", 14, QFont.Bold))
-        emoji.setDefaultTextColor(Qt.white)
-        emoji.setPos(
-            c * cell_size + cell_size / 2 - emoji.boundingRect().width() / 2,
-            r * cell_size + cell_size / 2 - emoji.boundingRect().height() / 2
-        )
-        self.scene.addItem(emoji)
-
-    def update_craft_cell(self, cell_size, r, c):
-        emoji = QGraphicsTextItem("⚒")
-        emoji.setFont(QFont("Arial", 14, QFont.Bold))
-        emoji.setDefaultTextColor(Qt.white)
-        emoji.setPos(
-            c * cell_size + cell_size / 2 - emoji.boundingRect().width() / 2,
-            r * cell_size + cell_size / 2 - emoji.boundingRect().height() / 2
-        )
-        self.scene.addItem(emoji)
+            emoji = self.update_point_cell(cell_size, value, r, c)
 
     def update_point_cell(self, cell_size, value, r, c):
         # Выбор эмодзи
-        if value == 4:
-            emoji = "🕳️"  # черная дыра для 4
-        elif value % 2 == 0:
-            emoji = "🌍"  # Земля для чётных
-        else:
-            emoji = "💥"  # Взрыв для нечётных
-
-        # Рисуем эмодзи в центре
-        emoji_text = QGraphicsTextItem(emoji)
-        emoji_text.setFont(QFont("Arial", 14, QFont.Bold))
-        emoji_text.setDefaultTextColor(Qt.white)
-        emoji_text.setPos(
-            c * cell_size + cell_size / 2 - emoji_text.boundingRect().width() / 2,
-            r * cell_size + cell_size / 2 - emoji_text.boundingRect().height() / 2
-        )
-        self.scene.addItem(emoji_text)
+        if value == 4:# черная дыра для 4
+            self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "🕳️")
+        elif value % 2 == 0:# Земля для чётных
+            self.cellStyle.updateTextureCell(self.scene, r, c, cell_size, self.game_state.getNamePlanet(r, c))
+        else:# Взрыв для нечётных
+            self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "💥")
 
         # Число в правом верхнем углу
-        number_text = QGraphicsTextItem(str(value))
-        number_text.setFont(QFont("Arial", 7, QFont.Bold))
-        number_text.setDefaultTextColor(Qt.white)
-        number_text.setPos(
-            c * cell_size + cell_size - number_text.boundingRect().width(),
-            r * cell_size + 0
-        )
-        self.scene.addItem(number_text)
-
-    def update_hero(self, cell_size):
-        pr, pc = self.game_state.player_pos
-        player_text = QGraphicsTextItem("🛸")
-        player_text.setFont(QFont("Arial", 14, QFont.Bold))
-        player_text.setDefaultTextColor(Qt.white)
-        player_text.setPos(
-            pc * cell_size + cell_size / 2 - player_text.boundingRect().width() / 2,
-            pr * cell_size + cell_size / 2 - player_text.boundingRect().height() / 2
-        )
-        self.scene.addItem(player_text)
+        self.cellStyle.updateDigitalCell(self.scene, r, c, cell_size, str(value))
         
     def update_text_hero(self, cell_size):
         pr, pc = self.game_state.player_pos
         hero_value = self.game_state.grid[pr][pc]
         if hero_value > 0:  # только для числовых ячеек
-            hero_number = QGraphicsTextItem(str(hero_value))
-            hero_number.setFont(QFont("Arial", 7, QFont.Bold))
-            hero_number.setDefaultTextColor(Qt.white)
-            # Позиция: справа вверху ячейки
-            hero_number.setPos(
-                pc * cell_size + cell_size - hero_number.boundingRect().width(),
-                pr * cell_size + 0
-            )
-            self.scene.addItem(hero_number)
+            self.cellStyle.updateDigitalCell(self.scene, pr, pc, cell_size, str(hero_value))
 
     def update_start(self, cell_size):
-        start_r, start_c = self.game_state.start_pos
-        if not self.game_state.visibility[start_r][start_c]:
-            return
-        start_r, start_c = self.game_state.start_pos
-        start_label = QGraphicsTextItem("🚩")
-        start_label.setFont(QFont("Arial", 10, QFont.Bold))
-        start_label.setDefaultTextColor(Qt.white)
-        start_label.setPos(
-            start_c * cell_size - 0.1*cell_size,
-            start_r * cell_size - 0.1*cell_size
-        )
-        self.scene.addItem(start_label)
+        r, c = self.game_state.start_pos
+        self.cellStyle.updateLeftCell(self.scene, self.game_state.visibility, r, c, cell_size, "🚩")
 
     def update_finish(self, cell_size):
-        end_r, end_c = self.game_state.end_pos
-        if not self.game_state.visibility[end_r][end_c]:
-            return
-        end_label = QGraphicsTextItem("🏁")
-        end_label.setFont(QFont("Arial", 10, QFont.Bold))
-        end_label.setDefaultTextColor(Qt.white)
-        end_label.setPos(
-            end_c * cell_size - 0.1*cell_size,
-            end_r * cell_size - 0.1*cell_size
-        )
-        self.scene.addItem(end_label)
+        r, c = self.game_state.end_pos
+        self.cellStyle.updateLeftCell(self.scene, self.game_state.visibility, r, c, cell_size, "🏁")
+
 ####### ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ #######

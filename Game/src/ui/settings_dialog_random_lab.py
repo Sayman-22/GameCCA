@@ -147,7 +147,7 @@ class SettingsDialoRandomLab(QDialog):
         opts.visibility_radius = self.empty_spin.value()
         opts.fog_of_war = self.fog_checkbox.isChecked()
         opts.visibility_radius = self.fog_spin.value()
-        self.options.use_masks = self.masks_checkbox.isChecked()
+        opts.use_masks = self.masks_checkbox.isChecked()
         opts.border_void = True
         # opts.disable_regen_at_1 = self.cb_noregen.isChecked()
         return opts

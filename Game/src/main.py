@@ -8,7 +8,7 @@ from ui.main_menu import MainMenuWindow
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # Сначала показываем окно входа
+    # Показываем окно входа
     login = LoginDialog()
     if login.exec_() == LoginDialog.Accepted:
         # Передаём имя пользователя и статистику в главное меню
