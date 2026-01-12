@@ -57,10 +57,12 @@ class StatisticsWindow(QMainWindow):
         layout.addSpacing(20)
 
         # --- Прогресс ---
+        max_difficulty = self.stats.get("max_difficulty", 0)
         random_wins = self.stats.get("random_wins", 0)
         campaign_wins = self.stats.get("last_completed_level", 0)
         black_hole_deaths = self.stats.get("deaths_from_black_hole", 0)
 
+        layout.addWidget(QLabel(f"🏆 Макс. сложность: {max_difficulty}"))
         layout.addWidget(QLabel(f"🎲 Пройдено случайных лабиринтов: {random_wins}"))
         layout.addWidget(QLabel(f"📜 Пройдено уровней в кампании: {campaign_wins}"))
         layout.addWidget(QLabel(f"🕳️ Смертей от черных дыр: {black_hole_deaths}"))

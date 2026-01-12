@@ -89,6 +89,7 @@ class GameState:
     BLACK_HOLE_CELL = -118
     GOOD_SYSTEM_CELL = -119
     BAD_SYSTEM_CELL = -120
+    MASK_CELL = -121
 
     def __init__(self,
                  username,
@@ -442,7 +443,6 @@ class GameState:
         # Если в ячейке наносится урон
         if damage > 0 and state_live == True:
             self.apply_damage(1)
-            # self.lives -= 1
             state_live = False
         # Проверка смерти
         if self.lives <= 0:
@@ -547,12 +547,32 @@ class GameState:
 
     def apply_damage(self, amount=1):
         """Наносит урон с учётом защиты."""
-        self.defense = max(0, self.defense - amount)
+        self.defense = self.defense - amount
         if (self.defense < 0):
-            self.lives += self.defense
+            self.lives -= amount
             self.defense = 0
         return
     
+
+    def calculate_difficulty(self):
+        """Рассчитывает уровень сложности лабиринта."""
+        base = 0
+        min_side = min(self.rows, self.cols)
+        if min_side >= 8:
+            base = (min_side - 8 + 3) // 3  # +2 для округления вверх
+
+        bonus = 0
+        if self.options.fog_of_war:
+            bonus += 3
+        if self.options.hardcore:
+            bonus += 2
+        if self.options.use_masks:
+            bonus += 1
+
+        return base + bonus
+
+
+
     def check_mask_guess(self, r, c, guess):
         """Проверяет число под маской."""
         if not self.mask_grid[r][c]:

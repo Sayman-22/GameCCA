@@ -2,20 +2,21 @@
   "User": {
     "password": "123",
     "stats": {
-      "random_wins": 30,
+      "random_wins": 33,
       "last_completed_level": 1,
-      "deaths": 33,
-      "deaths_from_black_hole": 5,
+      "deaths": 39,
+      "deaths_from_black_hole": 7,
       "lives": 2,
       "max_skips": 2,
       "craft_cells": 0,
-      "crystals": 33,
+      "crystals": 34,
       "pressure_tolerance": 200,
       "fog_radius": 1,
       "fog_remember": false,
       "defense": 1,
       "freeze_cell": 0,
-      "max_undo": 0
+      "max_undo": 0,
+      "max_difficulty": 2
     }
   }
 }

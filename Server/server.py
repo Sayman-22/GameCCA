@@ -67,7 +67,8 @@ def handle_register(request):
                 "crystals": 0,
                 "craft_cells": 0,
                 "fog_radius": 1,
-                "fog_remember": False
+                "fog_remember": False,
+                "max_difficulty": 0
             }
         }
         save_users(users_db)
@@ -170,6 +171,29 @@ def handle_record_black_hole_death(request):
         }
     else:
         return {"status": "error", "message": "Пользователь не найден"}
+
+def handle_update_max_difficulty(request):
+    username = request.get("username")
+    difficulty = request.get("difficulty", 0)
+
+    if not username or username not in users_db:
+        return {"status": "error", "message": "Пользователь не найден"}
+
+    current = users_db[username]["stats"].get("max_difficulty", 0)
+    if difficulty > current:
+        users_db[username]["stats"]["max_difficulty"] = difficulty
+        save_users(users_db)
+        return {
+            "status": "success",
+            "message": f"Новый рекорд сложности: {difficulty}",
+            "stats": users_db[username]["stats"]
+        }
+    else:
+        return {
+            "status": "success",
+            "message": "Рекорд не побит",
+            "stats": users_db[username]["stats"]
+        }
     
 ACTION_HANDLERS = {
     "login": handle_login,
@@ -179,6 +203,7 @@ ACTION_HANDLERS = {
     "record_death": handle_record_death,
     "record_black_hole_death": handle_record_black_hole_death,
     "get_stats": handle_get_stats,
+    "update_max_difficulty": handle_update_max_difficulty,
 }
 
 def handle_client(conn, addr):
@@ -226,6 +251,8 @@ def handle_client(conn, addr):
                     stats["freeze_cell"] = 0
                 if "max_undo" not in stats:
                     stats["max_undo"] = 0
+                if "max_difficulty" not in stats:
+                    stats["max_difficulty"] = 0
                     
             # Обработка действия
             handler = ACTION_HANDLERS.get(action)

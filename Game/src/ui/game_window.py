@@ -81,6 +81,7 @@ class GameWindow(QMainWindow):
         self.m_undoLabel = QLabel(f"↩️ Откаты: 0")
 
         # Правая колонка
+        self.m_difficultyLabel = QLabel("🧩 Сложность: 0")
         self.m_crystalLabel = QLabel("💎 Кристаллы: 0")
         self.m_craftLabel = QLabel("🛠️ Крафт: 0")
         self.m_mask_attempts = QLabel("👀 Ясновидение: 3")
@@ -93,9 +94,10 @@ class GameWindow(QMainWindow):
         hud_grid.addWidget(self.m_pressureLabel, 4, 0)
         hud_grid.addWidget(self.m_undoLabel, 5, 0)
 
-        hud_grid.addWidget(self.m_crystalLabel, 0, 1)
-        hud_grid.addWidget(self.m_craftLabel, 1, 1)
-        hud_grid.addWidget(self.m_mask_attempts, 2, 1)
+        hud_grid.addWidget(self.m_difficultyLabel, 0, 1)
+        hud_grid.addWidget(self.m_crystalLabel, 1, 1)
+        hud_grid.addWidget(self.m_craftLabel, 2, 1)
+        hud_grid.addWidget(self.m_mask_attempts, 3, 1)
 
         right_layout.addLayout(hud_grid)
         right_layout.addStretch()
@@ -198,6 +200,7 @@ class GameWindow(QMainWindow):
         self.m_crystalLabel.setText(f"💎 Кристаллы: {self.m_gameState.crystals}")
         self.m_craftLabel.setText(f"🛠️ Крафт: {self.m_gameState.craftedCells}")
         self.m_mask_attempts.setText(f"👀 Ясновидение: {3 - self.m_gameState.mask_attempts}/3")
+        self.m_difficultyLabel.setText(f"🧩 Сложность: {self.m_gameState.calculate_difficulty()}")
 
     def handle_victory(self):
         """Обработка победы."""
@@ -218,6 +221,18 @@ class GameWindow(QMainWindow):
         response = send_request(request, self)
         if response and response["status"] == "success":
             self.parent.stats = response["stats"]
+
+            # Отправляем запрос на обновление сложности
+            difficulty = self.m_gameState.calculate_difficulty()
+            difficulty_request = {
+                "action": "update_max_difficulty",
+                "username": self.parent.username,
+                "difficulty": difficulty
+            }
+            difficulty_response = send_request(difficulty_request, self)
+            if difficulty_response and difficulty_response["status"] == "success":
+                self.parent.stats = difficulty_response["stats"]
+
             QMessageBox.information(self, "Победа!", "Вы достигли финиша!\nСтатистика обновлена!")
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось обновить статистику на сервере.")

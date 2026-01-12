@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt
 from ui.style import COSMIC_STYLE
 from ui.main_menu_view import MainMenuView
 from ui.game_window import GameWindow
+from ui.network_client import send_request
 
 class MainMenuWindow(QMainWindow):
     def __init__(self, username, stats):
@@ -88,6 +89,7 @@ class MainMenuWindow(QMainWindow):
             else:
                 self.show()
         elif action_name == "statistics":
+            self.fetch_stats()
             self.statistics_window = StatisticsWindow(username=self.username, stats=self.stats, parent=self)
             self.statistics_window.show()
             self.hide()
@@ -99,8 +101,21 @@ class MainMenuWindow(QMainWindow):
             self.close()
         elif action_name == "finish":
             QMessageBox.information(self, "Победа!", "Вы достигли финиша главного меню!")
-            # Можно добавить анимацию или переход в другое состояние
 
+    def fetch_stats(self):
+        """Получает актуальную статистику с сервера."""
+        request = {
+            "action": "get_stats",
+            "username": self.username
+        }
+        response = send_request(request, self)
+        if response and response["status"] == "success":
+            self.stats = response["stats"]
+            return True
+        else:
+            print("Не удалось обновить статистику")
+            return False
+    
     def start_game_with_options(self, options):
         if self.game_window:
             self.game_window.close()

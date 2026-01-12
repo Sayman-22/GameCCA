@@ -42,13 +42,14 @@ class MainMenuView(QGraphicsView):
         bh = GameState.BLACK_HOLE_CELL
         gs = GameState.GOOD_SYSTEM_CELL
         bs = GameState.BAD_SYSTEM_CELL
+        mc = GameState.MASK_CELL
         # Фиксированная сетка для обучения
         fixed_grid = [
             [ee, ee, ee, ee, ee, ee, ee, ee, ee, ww, ee, ee, ee, ee, ee, ee, ee, ee, ee, ee],# 1
-            [ee, gs, ee, ee, ee, ee, ee, ee, ww, ww, ww, ee, ee, ee, ee, ee, ee, ee, ee, gs],# 2
+            [ee, gs, ee, mc, ee, ee, ee, ee, ww, ww, ww, ee, ee, ee, ee, ee, ee, ee, ee, gs],# 2
             [ee, ee, ee, ee, ee, ee, ee, ww, ww, ww, ww, ww, ee, ee, ee, ee, gs, ee, ee, ee],# 3
             [ee, ee, ee, ee, ee, bh, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, ee, ee, ee],# 4
-            [ee, ee, ee, ee, bh, ww, ww, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, ee, ee],# 5
+            [ee, ee, ee, ee, bh, ww, ww, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, mc, ee],# 5
             [ee, ee, ee, ee, ww, ww, ca, cc, cc, cc, cc, cc, ra, ww, ww, ww, ww, ww, ee, ee],# 6
             [ee, ee, ee, ww, ww, ww, cc, cc, cc, cc, cc, cc, cc, ww, ww, ww, ww, ww, ee, ee],# 7
             [ee, ee, ww, ww, ww, ww, cc, cc, cc, sc, cc, cc, cc, ww, se, st, ww, ww, ee, ee],# 8
@@ -86,6 +87,11 @@ class MainMenuView(QGraphicsView):
         par = {"name": "Необитаемые системы", "action": "bad_system", "desc": "Необитаемые системы"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
                                      GameState.BAD_SYSTEM_CELL, "💥")
+
+        # Ячейка - маска
+        par = {"name": "Маска", "action": "mask_cell", "desc": "?   Ячейка - маска"}
+        self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
+                                     GameState.MASK_CELL, "?")
 
         # Рисуем замок
         par = {"name": "Замок", "action": "castle_cell", "desc": "Это пространство замка"}
