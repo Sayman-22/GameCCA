@@ -9,8 +9,12 @@ from ui.mask_view import MaskView
 from ui.style import COSMIC_STYLE
 from ui.network_client import send_request
 from ui.local_ai_advisor import get_hint
+from ui.game_hero_info import setWindowLegend
+from ui.game_hero_info import GameHeroInfo
 
 class GameWindow(QMainWindow):
+    ghi = GameHeroInfo()
+
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
     def __init__(self, username, parent=None, game_options=None, campaign=False, level_id=0):
         super().__init__(parent)
@@ -69,67 +73,12 @@ class GameWindow(QMainWindow):
         right_layout.setSpacing(10)
 
         # HUD в две колонки
-        hud_grid = QGridLayout()
-        hud_grid.setSpacing(5)
-
-        # Левая колонка
-        self.m_lifeLabel = QLabel("❤️ Жизни: 2")
-        self.m_defenseLabel = QLabel("🛡️ Защита: 1")
-        self.m_skipLabel = QLabel("⏭️ Пропуски: 2")
-        self.m_freezeLabel = QLabel(f"❄️ Заморозка: 0")
-        self.m_pressureLabel = QLabel("⏲️ Давление: 200")
-        self.m_undoLabel = QLabel(f"↩️ Откаты: 0")
-
-        # Правая колонка
-        self.m_difficultyLabel = QLabel("🧩 Сложность: 0")
-        self.m_crystalLabel = QLabel("💎 Кристаллы: 0")
-        self.m_craftLabel = QLabel("🛠️ Крафт: 0")
-        self.m_mask_attempts = QLabel("👀 Ясновидение: 3")
-
-        # Добавляем в сетку
-        hud_grid.addWidget(self.m_lifeLabel, 0, 0)
-        hud_grid.addWidget(self.m_defenseLabel, 1, 0)
-        hud_grid.addWidget(self.m_skipLabel, 2, 0)
-        hud_grid.addWidget(self.m_freezeLabel, 3, 0)
-        hud_grid.addWidget(self.m_pressureLabel, 4, 0)
-        hud_grid.addWidget(self.m_undoLabel, 5, 0)
-
-        hud_grid.addWidget(self.m_difficultyLabel, 0, 1)
-        hud_grid.addWidget(self.m_crystalLabel, 1, 1)
-        hud_grid.addWidget(self.m_craftLabel, 2, 1)
-        hud_grid.addWidget(self.m_mask_attempts, 3, 1)
-
-        right_layout.addLayout(hud_grid)
+        self.ghi.createInfo(right_layout, 1)
         right_layout.addStretch()
 
         # Легенда
-        legend_group = QGroupBox("Легенда")
-        legend_layout = QVBoxLayout(legend_group)
-        legend_items = [
-            ("#1A2332", "🌍 Чётное число"),
-            ("#8B2E3C", "💥 Нечётное число"),
-            ("#C07B3B", "🕳️ Цикл (1, 2, 4)"),
-            ("#2A4B8C", "🔵 Старт / Финиш"),
-            ("#FF4444", "⏲️ Давление"),
-            ("#6A4C93", "💎 Кристалл"),
-            ("#B5651D", "🛠️ Крафт"),
-            ("#000000", "⬛ Пустота")
-        ]
-        for color_hex, text in legend_items:
-            row_widget = QWidget()
-            row_layout = QHBoxLayout(row_widget)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            row_layout.setSpacing(5)
-            color_square = QLabel()
-            color_square.setFixedSize(16, 16)
-            color_square.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #888;")
-            label_text = QLabel(text)
-            label_text.setStyleSheet("padding-left: 5px; color: #C0D0FF;")
-            row_layout.addWidget(color_square)
-            row_layout.addWidget(label_text)
-            row_layout.addStretch()
-            legend_layout.addWidget(row_widget)
-        right_layout.addWidget(legend_group)
+        setWindowLegend(right_layout)
+        right_layout.addStretch()
 
         # Управление
         move_group = QGroupBox("Управление")
@@ -188,20 +137,6 @@ class GameWindow(QMainWindow):
 
 
 ####### СОСТОЯНИЯ #######
-    def update_hud(self):
-        """Обновляет все элементы HUD."""
-        self.m_lifeLabel.setText(f"❤️ Жизни: {self.m_gameState.lives}")
-        self.m_defenseLabel.setText(f"🛡️ Защита: {self.m_gameState.defense}")
-        self.m_skipLabel.setText(f"⏭️ Пропуски: {self.m_gameState.max_skips}")
-        self.m_freezeLabel.setText(f"❄️ Заморозка: {self.m_gameState.freeze_cell}")
-        available = min(len(self.m_gameState.state_history), self.m_gameState.max_undo)
-        self.m_undoLabel.setText(f"↩️ Откаты: {available}/{self.m_gameState.max_undo}")
-        self.m_pressureLabel.setText(f"⏲️ Давление: {self.m_gameState.pressure_tolerance}")
-        self.m_crystalLabel.setText(f"💎 Кристаллы: {self.m_gameState.crystals}")
-        self.m_craftLabel.setText(f"🛠️ Крафт: {self.m_gameState.craftedCells}")
-        self.m_mask_attempts.setText(f"👀 Ясновидение: {3 - self.m_gameState.mask_attempts}/3")
-        self.m_difficultyLabel.setText(f"🧩 Сложность: {self.m_gameState.calculate_difficulty()}")
-
     def handle_victory(self):
         """Обработка победы."""
         if self.campaign:
@@ -294,7 +229,7 @@ class GameWindow(QMainWindow):
     def onFreeze(self):
         if self.m_gameState.activate_freeze():
             self.moveStep(0, 0)
-            self.update_hud()
+            self.ghi.update_hud(self.m_gameState)
             self.m_infoLabel.setText("Ячейка заморожена на один ход!")
         else:
             self.m_infoLabel.setText("Нет зарядов заморозки!")
@@ -302,7 +237,7 @@ class GameWindow(QMainWindow):
     def onUndo(self):
         if self.m_gameState.undo_move():
             self.m_glWidget.update_view()
-            self.update_hud()
+            self.ghi.update_hud(self.m_gameState)
             self.m_infoLabel.setText("Ход отменён.")
         else:
             self.m_infoLabel.setText("Нет ходов для отмены.")
@@ -330,12 +265,12 @@ class GameWindow(QMainWindow):
         result = self.m_gameState.check_mask_guess(r, c, guess)
         if result == "correct":
             line_edit.setStyleSheet("background-color: #2E7D32; color: white;")
-            self.update_hud()
+            self.ghi.update_hud(self.m_gameState)
             QMessageBox.information(self, "Успех!", "Вы угадали число!\n+3 кристалла!")
         elif result == "wrong":
             line_edit.setStyleSheet("background-color: #C62828; color: white;")
             self.m_infoLabel.setText(f"Ошибка! Осталось попыток: {3 - self.m_gameState.mask_attempts}")
-            self.update_hud()
+            self.ghi.update_hud(self.m_gameState)
         elif result == "game_over":
             self.handle_defeat()
 
@@ -379,7 +314,7 @@ class GameWindow(QMainWindow):
         # Обновляем интерфейс
         self.m_glWidget.update_view()
         # Обновляем HUD
-        self.update_hud()
+        self.ghi.update_hud(self.m_gameState)
 
         # Проверяем режим
         if self.m_gameState.options.mode == "arena":
@@ -446,7 +381,7 @@ class GameWindow(QMainWindow):
         self.m_glWidget.game_state = self.m_gameState
         self.m_gameState.update_visibility()
         self.m_glWidget.update_view()
-        self.update_hud()
+        self.ghi.update_hud(self.m_gameState)
 
         self.mask_view.game_state = self.m_gameState
         self.mask_view.update_view()

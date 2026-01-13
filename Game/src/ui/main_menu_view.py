@@ -43,6 +43,7 @@ class MainMenuView(QGraphicsView):
         gs = GameState.GOOD_SYSTEM_CELL
         bs = GameState.BAD_SYSTEM_CELL
         mc = GameState.MASK_CELL
+        fc = GameState.FOG_CELL
         # Фиксированная сетка для обучения
         fixed_grid = [
             [ee, ee, ee, ee, ee, ee, ee, ee, ee, ww, ee, ee, ee, ee, ee, ee, ee, ee, ee, ee],# 1
@@ -56,10 +57,10 @@ class MainMenuView(QGraphicsView):
             [ee, ee, ee, ww, ww, ww, cc, cc, cc, cc, cc, cc, cc, ww, ww, ww, ww, ww, ee, ee],# 9
             [ee, ee, ee, ee, ww, ec, cc, cc, cc, cc, cc, cc, ar, ww, ww, ww, ww, ww, ee, ee],# 10
             [ee, ee, ee, ee, ee, ec, ec, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, ee, ee],# 11
-            [ee, ee, ee, ee, ee, ee, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, ee, ee, ee],# 12
-            [ee, bs, ee, ee, ee, ee, ee, ww, ww, ww, ww, ww, ee, ee, ee, ee, ee, ee, bs, ee],# 13
-            [ee, ee, ee, ee, ee, ee, ee, ee, ww, ww, ww, ee, ee, ee, ee, gs, ee, ee, ee, ee],# 14
-            [bs, ee, bs, ee, ee, ee, ee, ee, ee, ww, ee, ee, ee, ee, ee, ee, ee, ee, ee, ee]# 15
+            [ee, ee, ee, ee, ee, ee, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, fc, fc, fc, fc],# 12
+            [ee, bs, ee, ee, ee, ee, ee, ww, ww, ww, ww, ww, ee, ee, ee, fc, fc, fc, bs, fc],# 13
+            [ee, ee, ee, ee, ee, ee, ee, ee, ww, ww, ww, ee, ee, ee, fc, gs, fc, fc, fc, ee],# 14
+            [bs, ee, bs, ee, ee, ee, ee, ee, ee, ww, ee, ee, ee, ee, fc, fc, fc, fc, ee, ee]# 15
             # 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 
         ]
 
@@ -92,6 +93,12 @@ class MainMenuView(QGraphicsView):
         par = {"name": "Маска", "action": "mask_cell", "desc": "?   Ячейка - маска"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
                                      GameState.MASK_CELL, "?")
+        
+        # Туман войны
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if GameState.FOG_CELL == fixed_grid[r][c]:
+                    self.cellStyle.updateColorCell(self.scene, self.cell_size, c, r, "#305050")
 
         # Рисуем замок
         par = {"name": "Замок", "action": "castle_cell", "desc": "Это пространство замка"}

@@ -1,11 +1,14 @@
 # ui/settings_dialog_random_lab.py
 
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QHBoxLayout
-from PyQt5.QtWidgets import QSpinBox, QCheckBox, QPushButton, QLabel
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QHBoxLayout, QWidget
+from PyQt5.QtWidgets import QSpinBox, QCheckBox, QPushButton, QLabel, QGridLayout
 from core.game_state import GameOptions
+from ui.game_hero_info import GameHeroInfo
 from ui.style import COSMIC_STYLE
 
 class SettingsDialoRandomLab(QDialog):
+    ghi = GameHeroInfo()
+
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -17,11 +20,17 @@ class SettingsDialoRandomLab(QDialog):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
+        layout_up = QGridLayout(self)
+        
+        panel1 = QWidget()
+        layout1 = QVBoxLayout(panel1)
 
         # Информация
-        info_label = QLabel(f"ℹ️ Количество пропусков хода («Следующий шаг»): {self.options.max_skips}")
-        info_label.setWordWrap(True)
-        layout.addWidget(info_label)
+        self.ghi.createInfo(layout1, 2)
+        layout_up.addWidget(panel1, 0, 0)
+
+        panel2 = QWidget()
+        layout2 = QVBoxLayout(panel2)
 
         # Размер поля
         size_layout = QHBoxLayout()
@@ -35,7 +44,7 @@ class SettingsDialoRandomLab(QDialog):
         size_layout.addWidget(self.rows_spin)
         size_layout.addWidget(QLabel("Столбцы:"))
         size_layout.addWidget(self.cols_spin)
-        layout.addLayout(size_layout)
+        layout2.addLayout(size_layout)
 
         # Диапазон начальных чисел
         range_layout = QHBoxLayout()
@@ -51,8 +60,11 @@ class SettingsDialoRandomLab(QDialog):
         range_layout.addWidget(self.max_val_spin)
         self.min_val_spin.valueChanged.connect(self.validate_range)
         self.max_val_spin.valueChanged.connect(self.validate_range)
-        layout.addLayout(range_layout)
+        layout2.addLayout(range_layout)
 
+        layout_up.addWidget(panel2, 0, 1)
+        layout.addLayout(layout_up)
+        
         # Опции CCA
         layout.addWidget(QLabel("Опции клеточного автомата:"))
 

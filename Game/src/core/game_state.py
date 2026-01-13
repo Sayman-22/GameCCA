@@ -90,6 +90,7 @@ class GameState:
     GOOD_SYSTEM_CELL = -119
     BAD_SYSTEM_CELL = -120
     MASK_CELL = -121
+    FOG_CELL = -122
 
     def __init__(self,
                  username,
@@ -199,12 +200,17 @@ class GameState:
         self.mask_grid = [[False] * cols for _ in range(rows)]
         self.original_values = [[0] * cols for _ in range(rows)]
 
-        # Выбираем N ячеек для масок (например, 5)
-        all_cells = [(r, c) for r in range(rows) for c in range(cols)
-                    if (r, c) != self.start_pos and\
-                       (r, c) != self.end_pos and\
-                       self.grid[r][c] > 0]
-        mask_cells = random.sample(all_cells, min(5, len(all_cells)))
+        # Собираем все ячейки с положительными значениями 
+        positive_cells = [
+                (r, c) for r in range(rows) for c in range(cols)
+                if self.grid[r][c] > 0 and (r, c) != self.start_pos and (r, c) != self.end_pos
+        ]
+        if not positive_cells:
+            return  # нет подходящих ячеек
+    
+        # Выбираем N ячеек для масок (15%)
+        num_masks = max(1, int(len(positive_cells) * 0.15))
+        mask_cells = random.sample(positive_cells, min(num_masks, len(positive_cells)))
 
         for r, c in mask_cells:
             self.mask_grid[r][c] = True
@@ -406,6 +412,10 @@ class GameState:
     def move_player(self, dr: int, dc: int) -> int:
         r, c = self.player_pos
         nr, nc = r + dr, c + dc
+
+        # Автоматическое открытие маски при входе
+        if self.use_masks and self.mask_grid[nr][nc]:
+            self.mask_grid[nr][nc] = False  # снимаем маску
 
         state_live = True # Отслеживает изменение жизни
         self.player_pos = (nr, nc)
