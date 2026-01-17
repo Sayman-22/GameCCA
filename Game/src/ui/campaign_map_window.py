@@ -4,9 +4,11 @@ from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QPushButton
 from PyQt5.QtWidgets import QScrollArea, QHBoxLayout, QLabel
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from ui.network_client import send_request
+from core.network_client import RequestForServer
 
 class CampaignMapWindow(QMainWindow):
+    rfs = RequestForServer()
+
     def __init__(self, parent=None, username=None):
         super().__init__(parent)
         self.parent_window = parent
@@ -15,8 +17,8 @@ class CampaignMapWindow(QMainWindow):
         self.resize(800, 600)
         self.setStyleSheet("background-color: #0B0F1F; color: #C0D0FF;")
 
-        request = {"action": "get_stats", "username": self.username}
-        response = send_request(request, self)
+        request = self.rfs.prepare_get_stats(self.username)
+        response = self.rfs.send_request(request, self)
         if response and response["status"] == "success":
             self.stats = response["stats"]
         else:

@@ -20,7 +20,7 @@ class SettingsDialoRandomLab(QDialog):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout_up = QGridLayout(self)
+        layout_up = QGridLayout()
         
         panel1 = QWidget()
         layout1 = QVBoxLayout(panel1)
@@ -93,6 +93,11 @@ class SettingsDialoRandomLab(QDialog):
         self.randomize_at_4_checkbox.setChecked(True)
         layout.addWidget(self.randomize_at_4_checkbox)
 
+        # Противники
+        layout.addWidget(QLabel("Противники:"))
+        self.enemy_easy_static_checkbox = QCheckBox("Хасы")
+        layout.addWidget(self.enemy_easy_static_checkbox)
+
         # === Игровые свойства ===
         layout.addWidget(QLabel("Свойства игры:"))
         self.cb_hardcore = QCheckBox("Хардкор (1 жизнь)")
@@ -160,6 +165,7 @@ class SettingsDialoRandomLab(QDialog):
         opts.fog_of_war = self.fog_checkbox.isChecked()
         opts.visibility_radius = self.fog_spin.value()
         opts.use_masks = self.masks_checkbox.isChecked()
+        opts.spawn_enemies_easy_static = self.enemy_easy_static_checkbox.isChecked()
         opts.border_void = True
         # opts.disable_regen_at_1 = self.cb_noregen.isChecked()
         return opts

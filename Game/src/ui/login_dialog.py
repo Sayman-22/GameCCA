@@ -4,9 +4,11 @@ import socket
 import json
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel, QMessageBox
 from ui.style import COSMIC_STYLE
-from ui.network_client import send_request_log
+from core.network_client import RequestForServer
 
 class LoginDialog(QDialog):
+    rfs = RequestForServer()
+
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -55,7 +57,7 @@ class LoginDialog(QDialog):
             QMessageBox.warning(self, "Ошибка", "Заполните все поля")
             return
 
-        response = send_request_log(self, "login", username, password)
+        response = self.rfs.send_request_log("login", username, password)
         if response and response["status"] == "success":
             self.username = username
             self.stats = response["stats"]
@@ -70,7 +72,7 @@ class LoginDialog(QDialog):
             QMessageBox.warning(self, "Ошибка", "Заполните все поля")
             return
 
-        response = send_request_log(self, "register", username, password)
+        response = self.rfs.send_request_log("register", username, password)
         if response and response["status"] == "success":
             self.username = username
             self.stats = response["stats"]

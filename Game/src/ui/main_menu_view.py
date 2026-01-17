@@ -2,8 +2,8 @@
 from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QPainter
-from core.game_state import GameState
 from core.update_cell import CellStyle
+from core.state_cell import StateCell
 
 class MainMenuView(QGraphicsView):
     def __init__(self, parent=None):
@@ -28,27 +28,28 @@ class MainMenuView(QGraphicsView):
     def setup_scene(self):
         """Инициализирует поле."""
 
-        sf = GameState.START_FIN_CELL
-        ee = GameState.EMPTY
-        cc = GameState.CASTLE
-        ww = GameState.WALL
-        ca = GameState.CAMPAIGN_CELL
-        ar = GameState.ARENA_CELL
-        ra = GameState.RANDOM_CELL
-        st = GameState.STATISTICS_CELL
-        se = GameState.SETTINGS_CELL
-        ec = GameState.END_CELL
-        sc = GameState.START_CELL
-        bh = GameState.BLACK_HOLE_CELL
-        gs = GameState.GOOD_SYSTEM_CELL
-        bs = GameState.BAD_SYSTEM_CELL
-        mc = GameState.MASK_CELL
-        fc = GameState.FOG_CELL
+        sf = StateCell.START_FIN_CELL
+        ee = StateCell.EMPTY
+        cc = StateCell.CASTLE
+        ww = StateCell.WALL
+        ca = StateCell.CAMPAIGN_CELL
+        ar = StateCell.ARENA_CELL
+        ra = StateCell.RANDOM_CELL
+        st = StateCell.STATISTICS_CELL
+        se = StateCell.SETTINGS_CELL
+        ec = StateCell.END_CELL
+        sc = StateCell.START_CELL
+        bh = StateCell.BLACK_HOLE_CELL
+        gs = StateCell.GOOD_SYSTEM_CELL
+        bs = StateCell.BAD_SYSTEM_CELL
+        mc = StateCell.MASK_CELL
+        fc = StateCell.FOG_CELL
+        es = StateCell.ENEMY_EASY_STATIC
         # Фиксированная сетка для обучения
         fixed_grid = [
             [ee, ee, ee, ee, ee, ee, ee, ee, ee, ww, ee, ee, ee, ee, ee, ee, ee, ee, ee, ee],# 1
             [ee, gs, ee, mc, ee, ee, ee, ee, ww, ww, ww, ee, ee, ee, ee, ee, ee, ee, ee, gs],# 2
-            [ee, ee, ee, ee, ee, ee, ee, ww, ww, ww, ww, ww, ee, ee, ee, ee, gs, ee, ee, ee],# 3
+            [ee, ee, ee, ee, ee, ee, ee, ww, ww, es, ww, ww, ee, ee, ee, ee, gs, ee, ee, ee],# 3
             [ee, ee, ee, ee, ee, bh, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, ee, ee, ee],# 4
             [ee, ee, ee, ee, bh, ww, ww, ww, ww, ww, ww, ww, ww, ww, bh, ee, ee, ee, mc, ee],# 5
             [ee, ee, ee, ee, ww, ww, ca, cc, cc, cc, cc, cc, ra, ww, ww, ww, ww, ww, ee, ee],# 6
@@ -67,77 +68,83 @@ class MainMenuView(QGraphicsView):
         # Заполняем пустотой
         par = {"name": "Пустота", "action": "void", "desc": "Здесь нет ничего интересного"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.EMPTY, "void.png")
+                                     StateCell.EMPTY, "void.png")
         
         # Рисуем иконку с финишем
         par = {"name": "Выход", "action": "exit", "desc": "🏁 Закройте игру"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.END_CELL, "🏁")
+                                     StateCell.END_CELL, "🏁")
         
         # Заполняем черные дыры
         par = {"name": "Черная дыра", "action": "black_hole", "desc": "Черная дыра - смерть, ждущая путников"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.BLACK_HOLE_CELL, "🕳️")
+                                     StateCell.BLACK_HOLE_CELL, "🕳️")
         
         # Заполняем обитаемые системы
         par = {"name": "Обитаемые системы", "action": "good_system", "desc": "Обитаемые системы"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.GOOD_SYSTEM_CELL, "🌍")
+                                     StateCell.GOOD_SYSTEM_CELL, "🌍")
         
-        # Заполняем ytобитаемые системы
+        # Заполняем необитаемые системы
         par = {"name": "Необитаемые системы", "action": "bad_system", "desc": "Необитаемые системы"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.BAD_SYSTEM_CELL, "💥")
+                                     StateCell.BAD_SYSTEM_CELL, "💥")
 
         # Ячейка - маска
         par = {"name": "Маска", "action": "mask_cell", "desc": "?   Ячейка - маска"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.MASK_CELL, "?")
+                                     StateCell.MASK_CELL, "?")
         
         # Туман войны
         for r in range(self.rows):
             for c in range(self.cols):
-                if GameState.FOG_CELL == fixed_grid[r][c]:
+                if StateCell.FOG_CELL == fixed_grid[r][c]:
                     self.cellStyle.updateColorCell(self.scene, self.cell_size, c, r, "#305050")
+                    self.actions[(r, c)] = {"name": "Туман войны", "action": "fog", "desc": "Туман войны"}
 
         # Рисуем замок
         par = {"name": "Замок", "action": "castle_cell", "desc": "Это пространство замка"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.CASTLE, "wall_texture.png")
+                                     StateCell.CASTLE, "wall_texture.png")
 
         # Рисуем стену
         par = {"name": "Стена", "action": "wall_cell", "desc": "Это стена"}
         self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
-                                     GameState.WALL, "wall_texture_2.png")
+                                     StateCell.WALL, "wall_texture_2.png")
+
+        # Рисуем врага (простого статического)
+        par = {"name": "Хасы", "action": "wall_cell", "desc": "Это  враг - Хасы, не перемещается по ячейкам, атакует в радиусе 1 ячейки"}
+        self.cellStyle.updateTexture(self.scene, fixed_grid, self.rows, self.cols, self.cell_size, self.actions, par,
+                                     StateCell.ENEMY_EASY_STATIC, "ALIEN1.png")
 
         # Рисуем иконку кампании
         cc = self.cellStyle.updateObject(self.scene, fixed_grid, self.rows, self.cols, self.cell_size,
-                                         GameState.CAMPAIGN_CELL, "📜")
+                                         StateCell.CAMPAIGN_CELL, "📜")
         self.actions[(cc.row, cc.col)] = {"name": "Кампания", "action": "campaign", "desc": "📜 Пройдите уровни кампании"}
 
         # Рисуем иконку арены
         cc = self.cellStyle.updateObject(self.scene, fixed_grid, self.rows, self.cols, self.cell_size,
-                                         GameState.ARENA_CELL, "⚔️")
+                                         StateCell.ARENA_CELL, "⚔️")
         self.actions[(cc.row, cc.col)] = {"name": "Арена", "action": "arena", "desc": "⚔️ Испытайте себя в арене"}
 
         # Рисуем иконку случайного лабиринта
         cc = self.cellStyle.updateObject(self.scene, fixed_grid, self.rows, self.cols, self.cell_size,
-                                         GameState.RANDOM_CELL, "🎲")
+                                         StateCell.RANDOM_CELL, "🎲")
         self.actions[(cc.row, cc.col)] = {"name": "Случайный уровень", "action": "random", "desc": "🎲 Начните случайный лабиринт"}
 
         # Рисуем иконку окна со статистикой
         cc = self.cellStyle.updateObject(self.scene, fixed_grid, self.rows, self.cols, self.cell_size,
-                                         GameState.STATISTICS_CELL, "📊")
+                                         StateCell.STATISTICS_CELL, "📊")
         self.actions[(cc.row, cc.col)] = {"name": "Статистика", "action": "statistics", "desc": "📊 Посмотрите свою статистику"}
 
         # Рисуем иконку окна с настройками
         cc = self.cellStyle.updateObject(self.scene, fixed_grid, self.rows, self.cols, self.cell_size,
-                                         GameState.SETTINGS_CELL, "⚙️")
+                                         StateCell.SETTINGS_CELL, "⚙️")
         self.actions[(cc.row, cc.col)] = {"name": "Настройки", "action": "settings", "desc": "⚙️ Измените настройки игры"}
 
         # Рисуем персонажа
         cc = self.cellStyle.updateObject(self.scene, fixed_grid, self.rows, self.cols, self.cell_size,
-                                         GameState.START_CELL, "🛸")
+                                         StateCell.START_CELL, "🛸")
 
         # Устанавливаем размер сцены
         self.setSceneRect(0, 0, self.cols * self.cell_size, self.rows * self.cell_size)

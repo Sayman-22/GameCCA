@@ -1,5 +1,5 @@
 # ui/mask_view.py
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem
 from PyQt5.QtWidgets import QMessageBox, QLineEdit
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QBrush, QPainter
@@ -27,7 +27,8 @@ class MaskView(QGraphicsView):
             return
 
         self.scene.clear()
-        rows, cols = self.game_state.rows, self.game_state.cols
+        rows, cols = self.game_state.getRows(), self.game_state.getCols()
+        mask_grid = self.game_state.getMaskGrid()
 
         for r in range(rows):
             for c in range(cols):
@@ -38,7 +39,7 @@ class MaskView(QGraphicsView):
                 if value <= 0:
                     item.setBrush(QColor("#2A2A2A"))
                     item.setPen(QColor("#888"))
-                elif self.game_state.use_masks and self.game_state.mask_grid[r][c]:
+                elif self.game_state.getParUseMasks() and mask_grid[r][c]:
                     self.cellStyle.updateColorCell(self.scene, self.cell_size, c, r, "#4A4A4A")
                     self.cellStyle.updateObjectCell(self.scene, r, c, self.cell_size, "?")
                 else:
@@ -55,8 +56,8 @@ class MaskView(QGraphicsView):
         c = int(pos.x() // self.cell_size)
         r = int(pos.y() // self.cell_size)
 
-        if (0 <= r < self.game_state.rows and 0 <= c < self.game_state.cols):
-            if self.game_state.use_masks and self.game_state.mask_grid[r][c]:
+        if (0 <= r < self.game_state.getRows() and 0 <= c < self.game_state.getCols()):
+            if self.game_state.getParUseMasks() and self.game_state.mask_grid[r][c]:
                 # Если уже есть активное поле ввода — закрываем его
                 if self.active_line_edit:
                     self.active_line_edit.deleteLater()

@@ -34,5 +34,6 @@ def get_level_1(username) -> GameState:
     game_state.start_pos = (1, 1)
     game_state.end_pos = (4, 4)
     game_state.player_pos = game_state.start_pos
+    game_state.cellStyle.updatePlanetGrid(options, game_state.grid, game_state.planet)
     
     return game_state

@@ -1,5 +1,3 @@
-# main.py
-
 import sys
 from PyQt5.QtWidgets import QApplication
 from ui.login_dialog import LoginDialog

@@ -1,11 +1,14 @@
-from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QBrush, QFont, QPainter
-from core.game_state import GameState
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor, QBrush, QPainter
+from ui.game_hero_info import GameHeroInfo
 from ui.style import COSMIC_STYLE
 from core.update_cell import CellStyle
+from core.state_cell import StateCell
 
 class GameView(QGraphicsView):
+    ghi = GameHeroInfo()
+
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
     def __init__(self, game_state):
         super().__init__()
@@ -46,10 +49,11 @@ class GameView(QGraphicsView):
         self.game_state.arena_next_move()
 
         # 1. Рисуем все ячейки
-        for r in range(self.game_state.rows):
-            for c in range(self.game_state.cols):
+        mask_grid = self.game_state.getMaskGrid()
+        for r in range(self.game_state.getRows()):
+            for c in range(self.game_state.getCols()):
                 if self.game_state.visibility[r][c]:
-                    if self.game_state.use_masks and self.game_state.mask_grid[r][c]:
+                    if self.game_state.getParUseMasks() and mask_grid[r][c]:
                         self.cellStyle.updateColorCell(self.scene, cell_size, c, r, "#4A4A4A")
                         self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "?")
                     else:
@@ -68,57 +72,48 @@ class GameView(QGraphicsView):
         if not self.game_state.options.mode == "arena":
             self.update_finish(cell_size)
 
-        self.setSceneRect(0, 0, self.game_state.cols * cell_size, self.game_state.rows * cell_size)
+        # Если герой получил урон — мерцаем красным
+        if getattr(self.game_state, 'just_damaged', True):
+            overlay = QGraphicsRectItem(self.game_state.player_pos[1] * cell_size, self.game_state.player_pos[0] * cell_size, cell_size, cell_size)
+            overlay.setBrush(QColor(255, 0, 0, 255))  # полупрозрачный красный
+            self.scene.addItem(overlay)
+            QTimer.singleShot(100, lambda: setattr(self.game_state, 'just_damaged', False))
+            QTimer.singleShot(200, lambda: self.update_view())
+
+        self.setSceneRect(0, 0, self.game_state.getCols() * cell_size, self.game_state.getRows() * cell_size)
 
 ####### СОБЫТИЯ #######
 
 
 
 ####### ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ #######
-    def get_color(self, value, pressure_tolerance):
-        if value == GameState.START_FIN_CELL:
-            return QBrush(QColor("#2A4B8C"))  # тёмно-синий (старт/финиш)
-        if value == GameState.CRYSTAL:
-            return QBrush(QColor("#6A4C93"))  # пурпурный (кристалл)
-        if value == GameState.CRAFT:
-            return QBrush(QColor("#B5651D"))  # медный (крафт)
-        if value == GameState.EMPTY:
-            return QBrush(QColor("#000000"))  # чёрная пустота
-        if value in (1, 2, 4):
-            return QBrush(QColor("#C07B3B"))  # тусклый оранжевый (цикл)
-        if value > pressure_tolerance:
-            return QBrush(QColor("#FF4444"))  # превышение допустимого давления
-        if value % 2 == 0:
-            return QBrush(QColor("#1A2332"))  # почти фон (чётные)
-        else:
-            return QBrush(QColor("#8B2E3C"))  # броский, но тёмный (нечётные)
-        
     def update_all_cell(self, cell_size, r, c):
         pr, pc = self.game_state.player_pos
         value = self.game_state.grid[r][c]
         item = QGraphicsRectItem(c * cell_size, r * cell_size, cell_size, cell_size)
-        item.setBrush(self.get_color(value, self.game_state.pressure_tolerance))
+        item.setBrush(self.ghi.get_color_cell(value, self.game_state.pressure_tolerance))
         self.scene.addItem(item)
 
         # Текст для обычных числовых ячеек (не спец.)
         if pr == r and pc == c:
             return
         
-        emoji = ""
-        if value == GameState.CRYSTAL:
+        if value == StateCell.CRYSTAL:
             self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "💎")
-        elif value == GameState.CRAFT:
+        elif value == StateCell.CRAFT:
             self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "⚒")
-        elif value == GameState.START_FIN_CELL:
+        elif value == StateCell.ENEMY_EASY_STATIC:
+            self.cellStyle.updateTextureCell(self.scene, r, c, cell_size, "ALIEN1.png")
+        elif value == StateCell.START_FIN_CELL:
             pass
-        elif value == GameState.EMPTY:
+        elif value == StateCell.EMPTY:
             self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "⚫")
         elif value > self.game_state.pressure_tolerance and (r, c) != self.game_state.player_pos:   # не рисуем, если там герой
             self.cellStyle.updateObjectCell(self.scene, r, c, cell_size, "⏲️")
             # Число в правом верхнем углу
             self.cellStyle.updateDigitalCell(self.scene, r, c, cell_size, str(value))
         elif value > 0 and (r, c) != self.game_state.player_pos:  # не рисуем, если там герой
-            emoji = self.update_point_cell(cell_size, value, r, c)
+            self.update_point_cell(cell_size, value, r, c)
 
     def update_point_cell(self, cell_size, value, r, c):
         # Выбор эмодзи
@@ -139,11 +134,11 @@ class GameView(QGraphicsView):
             self.cellStyle.updateDigitalCell(self.scene, pr, pc, cell_size, str(hero_value))
 
     def update_start(self, cell_size):
-        r, c = self.game_state.start_pos
+        r, c = self.game_state.getStartPos()
         self.cellStyle.updateLeftCell(self.scene, self.game_state.visibility, r, c, cell_size, "🚩")
 
     def update_finish(self, cell_size):
-        r, c = self.game_state.end_pos
+        r, c = self.game_state.getEndPos()
         self.cellStyle.updateLeftCell(self.scene, self.game_state.visibility, r, c, cell_size, "🏁")
 
 ####### ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ #######

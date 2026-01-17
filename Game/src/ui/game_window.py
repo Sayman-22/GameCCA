@@ -7,13 +7,15 @@ from PyQt5.QtCore import Qt
 from ui.game_view import GameView
 from ui.mask_view import MaskView
 from ui.style import COSMIC_STYLE
-from ui.network_client import send_request
-from ui.local_ai_advisor import get_hint
-from ui.game_hero_info import setWindowLegend
+from core.network_client import RequestForServer
 from ui.game_hero_info import GameHeroInfo
+from ui.local_ai_advisor import get_hint
+from PyQt5.QtCore import QTimer
+import random
 
 class GameWindow(QMainWindow):
     ghi = GameHeroInfo()
+    rfs = RequestForServer()
 
 ####### ИНИЦИАЛИЗАЦИЯ ОКНА #######
     def __init__(self, username, parent=None, game_options=None, campaign=False, level_id=0):
@@ -77,7 +79,7 @@ class GameWindow(QMainWindow):
         right_layout.addStretch()
 
         # Легенда
-        setWindowLegend(right_layout)
+        self.ghi.setWindowLegend(right_layout)
         right_layout.addStretch()
 
         # Управление
@@ -140,44 +142,30 @@ class GameWindow(QMainWindow):
     def handle_victory(self):
         """Обработка победы."""
         if self.campaign:
-            request = {
-                "action": "update_campaign_level",
-                "username": self.parent.username,
-                "level_id": str(self.level_id)
-            }
+            request = self.rfs.prepare_update_campaign_level(self.username, self.level_id)
         else:
-            request = {
-                "action": "update_stats",
-                "username": self.parent.username,
-                "stat_type": "random_wins",
-                "operation": "increment",
-                "value": 1
-            }
-        response = send_request(request, self)
-        if response and response["status"] == "success":
-            self.parent.stats = response["stats"]
+            request = self.rfs.prepare_update_stats(self.username, "random_wins", "increment", 1)
+        response = self.rfs.send_request(request, self)
 
-            # Отправляем запрос на обновление сложности
+        if response and response["status"] == "success":
+            self.stats = response["stats"]
             difficulty = self.m_gameState.calculate_difficulty()
-            difficulty_request = {
-                "action": "update_max_difficulty",
-                "username": self.parent.username,
-                "difficulty": difficulty
-            }
-            difficulty_response = send_request(difficulty_request, self)
+            difficulty_request = self.rfs.prepare_update_max_difficulty(self.username, difficulty)
+            difficulty_response = self.rfs.send_request(difficulty_request, self)
             if difficulty_response and difficulty_response["status"] == "success":
-                self.parent.stats = difficulty_response["stats"]
+                self.stats = difficulty_response["stats"]
 
             QMessageBox.information(self, "Победа!", "Вы достигли финиша!\nСтатистика обновлена!")
         else:
             QMessageBox.warning(self, "Ошибка", "Не удалось обновить статистику на сервере.")
+
         self.m_gameState.state_history.clear()
 
     def handle_defeat(self):
         """Обработка проигрыша."""
         if hasattr(self.parent, 'username'):
-            request = {"action": "record_death", "username": self.parent.username}
-            response = send_request(request, self)
+            request = {"action": "record_death", "username": self.username}
+            response = self.rfs.send_request(request, self)
             if response and response["status"] == "success":
                 self.parent.stats = response["stats"]
                 msg = "Вы проиграли!\nСтатистика обновлена."
@@ -194,7 +182,7 @@ class GameWindow(QMainWindow):
         """Смерть от чёрной дыры."""
         if hasattr(self.parent, 'username'):
             request = {"action": "record_black_hole_death", "username": self.parent.username}
-            response = send_request(request, self)
+            response = self.rfs.send_request(request, self)
             if response and response["status"] == "success":
                 self.parent.stats = response["stats"]
                 msg = "Вы поглощены чёрной дырой!\nСтатистика обновлена."
@@ -274,6 +262,13 @@ class GameWindow(QMainWindow):
         elif result == "game_over":
             self.handle_defeat()
 
+    
+    def shake_view(self):
+        original_pos = self.m_glWidget.pos()
+        dx = random.choice([-3, -2, 2, 3])
+        dy = random.choice([-3, -2, 2, 3])
+        self.m_glWidget.move(original_pos.x() + dx, original_pos.y() + dy)
+        QTimer.singleShot(50, lambda: self.m_glWidget.move(original_pos))
 ####### СОСТОЯНИЯ #######
 
 
@@ -316,6 +311,10 @@ class GameWindow(QMainWindow):
         # Обновляем HUD
         self.ghi.update_hud(self.m_gameState)
 
+        # потеря жизни
+        if state == 2:  
+            self.shake_view()  # трясём поле
+            
         # Проверяем режим
         if self.m_gameState.options.mode == "arena":
             if self.m_gameState.lives <= 0:
@@ -324,7 +323,7 @@ class GameWindow(QMainWindow):
             # Обычный режим
             if self.m_gameState and state > 0:
                 # Проверяем победу
-                if self.m_gameState.player_pos == self.m_gameState.end_pos:
+                if self.m_gameState.player_pos == self.m_gameState.getEndPos():
                     self.handle_victory()
                     # Возврат в главное меню ПОСЛЕ закрытия сообщения
                     self.return_to_main_menu()

@@ -5,9 +5,11 @@ from PyQt5.QtCore import Qt
 from ui.style import COSMIC_STYLE
 from ui.main_menu_view import MainMenuView
 from ui.game_window import GameWindow
-from ui.network_client import send_request
+from core.network_client import RequestForServer
 
 class MainMenuWindow(QMainWindow):
+    rfs = RequestForServer()
+
     def __init__(self, username, stats):
         super().__init__()
         self.username = username
@@ -62,11 +64,9 @@ class MainMenuWindow(QMainWindow):
     def handle_action(self, action_name):
         """Выполняет действие по имени."""
         from ui.game_window import GameWindow
-        from ui.campaign_map_window import CampaignMapWindow
-        from ui.statistics_window import StatisticsWindow
-        from ui.settings_dialog_random_lab import SettingsDialoRandomLab
 
         if action_name == "campaign":
+            from ui.campaign_map_window import CampaignMapWindow
             self.campaign_window = CampaignMapWindow(parent=self, username=self.username)
             self.campaign_window.show()
             self.hide()
@@ -89,6 +89,7 @@ class MainMenuWindow(QMainWindow):
             else:
                 self.show()
         elif action_name == "statistics":
+            from ui.statistics_window import StatisticsWindow
             self.fetch_stats()
             self.statistics_window = StatisticsWindow(username=self.username, stats=self.stats, parent=self)
             self.statistics_window.show()
@@ -104,11 +105,8 @@ class MainMenuWindow(QMainWindow):
 
     def fetch_stats(self):
         """Получает актуальную статистику с сервера."""
-        request = {
-            "action": "get_stats",
-            "username": self.username
-        }
-        response = send_request(request, self)
+        request = self.rfs.prepare_get_stats(self.username)
+        response = self.rfs.send_request(request, self)
         if response and response["status"] == "success":
             self.stats = response["stats"]
             return True

@@ -1,35 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QGroupBox
-
-def setWindowLegend(right_layout):
-    legend_group = QGroupBox("Легенда")
-    legend_layout = QVBoxLayout(legend_group)
-    legend_items = [
-        ("#1A2332", "🌍 Чётное число"),
-        ("#8B2E3C", "💥 Нечётное число"),
-        ("#C07B3B", "🕳️ Цикл (1, 2, 4)"),
-        ("#2A4B8C", "🔵 Старт / Финиш"),
-        ("#FF4444", "⏲️ Давление"),
-        ("#6A4C93", "💎 Кристалл"),
-        ("#B5651D", "🛠️ Крафт"),
-        ("#000000", "⬛ Пустота")
-    ]
-    for color_hex, text in legend_items:
-        row_widget = QWidget()
-        row_layout = QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(5)
-        color_square = QLabel()
-        color_square.setFixedSize(16, 16)
-        color_square.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #888;")
-        label_text = QLabel(text)
-        label_text.setStyleSheet("padding-left: 5px; color: #C0D0FF;")
-        row_layout.addWidget(color_square)
-        row_layout.addWidget(label_text)
-        row_layout.addStretch()
-        legend_layout.addWidget(row_widget)
-    right_layout.addWidget(legend_group)
-
+from PyQt5.QtGui import QColor, QBrush
+from core.state_cell import StateCell
 
 class GameHeroInfo:
     def createInfo(self, right_layout, state):
@@ -83,4 +55,53 @@ class GameHeroInfo:
         self.m_craftLabel.setText(f"🛠️ Крафт: {gameState.craftedCells}")
         self.m_mask_attempts.setText(f"👀 Ясновидение: {3 - gameState.mask_attempts}/3")
         self.m_difficultyLabel.setText(f"🧩 Сложность: {gameState.calculate_difficulty()}")
+
+    def get_color_cell(self, value, pressure_tolerance):
+        if value == StateCell.START_FIN_CELL:
+            return QBrush(QColor("#2A4B8C"))  # тёмно-синий (старт/финиш)
+        if value == StateCell.CRYSTAL:
+            return QBrush(QColor("#6A4C93"))  # пурпурный (кристалл)
+        if value == StateCell.CRAFT:
+            return QBrush(QColor("#B5651D"))  # медный (крафт)
+        if value == StateCell.EMPTY:
+            return QBrush(QColor("#000000"))  # чёрная пустота
+        if value == StateCell.ENEMY_EASY_STATIC:
+            return QBrush(QColor("#000000"))  # ХАСЫ}
+        if value in (1, 2, 4):
+            return QBrush(QColor("#C07B3B"))  # тусклый оранжевый (цикл)
+        if value > pressure_tolerance:
+            return QBrush(QColor("#FF4444"))  # превышение допустимого давления
+        if value % 2 == 0:
+            return QBrush(QColor("#1A2332"))  # почти фон (чётные)
+        else:
+            return QBrush(QColor("#8B2E3C"))  # броский, но тёмный (нечётные)
+        
+    def setWindowLegend(self, right_layout):
+        legend_group = QGroupBox("Легенда")
+        legend_layout = QVBoxLayout(legend_group)
+        legend_items = [
+            ("#1A2332", "🌍 Чётное число"),
+            ("#8B2E3C", "💥 Нечётное число"),
+            ("#C07B3B", "🕳️ Цикл (1, 2, 4)"),
+            ("#2A4B8C", "🔵 Старт / Финиш"),
+            ("#FF4444", "⏲️ Давление"),
+            ("#6A4C93", "💎 Кристалл"),
+            ("#B5651D", "🛠️ Крафт"),
+            ("#000000", "⬛ Пустота")
+        ]
+        for color_hex, text in legend_items:
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(5)
+            color_square = QLabel()
+            color_square.setFixedSize(16, 16)
+            color_square.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #888;")
+            label_text = QLabel(text)
+            label_text.setStyleSheet("padding-left: 5px; color: #C0D0FF;")
+            row_layout.addWidget(color_square)
+            row_layout.addWidget(label_text)
+            row_layout.addStretch()
+            legend_layout.addWidget(row_widget)
+        right_layout.addWidget(legend_group)
 

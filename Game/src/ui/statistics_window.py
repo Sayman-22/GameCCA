@@ -1,14 +1,11 @@
 # ui/achievements_window.py
 
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget
-from PyQt5.QtWidgets import QLabel, QPushButton, QMessageBox
+from PyQt5.QtWidgets import QLabel, QPushButton
 from ui.style import COSMIC_STYLE
-from ui.network_client import send_request
-
-import socket
-import json
 
 class StatisticsWindow(QMainWindow):
+
     def __init__(self, username, stats, parent=None):
         super().__init__(parent)
         self.username = username
